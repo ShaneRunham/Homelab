@@ -10,8 +10,8 @@ Tailscale address, a MAC address, a Discord ID or anything gitleaks flags is lef
 
 Run by the shared post-commit hook in the background (homelab and tv-launcher); safe to run by hand any time:
   ~/homelab/tools/publish-public.py ~/homelab        (or ~/tv-launcher; --dry-run builds and checks without pushing)
-Snapshots are committed in ~/.local/share/public-mirrors/<repo> under an email GitHub doesn't link to the account, so
-they don't double the green squares (the private copies already count)."""
+Snapshots are committed in ~/.local/share/public-mirrors/<repo> under Shane's GitHub noreply email, so the repos show
+him as contributor (his pick, 2026-11-16: new work counts on the graph in both the private and the public copy)."""
 import fnmatch, json, os, re, shutil, subprocess, sys, tempfile, urllib.request
 
 HOME = os.path.expanduser("~")
@@ -127,7 +127,7 @@ def publish(name, out, message, dry):
         os.makedirs(repo, exist_ok=True)
         git(repo, "init", "-q", "-b", "main")
         git(repo, "config", "user.name", "Shane Runham")
-        git(repo, "config", "user.email", "public-mirror@fedora.local")  # not linked to GitHub: no double count
+        git(repo, "config", "user.email", "118390486+ShaneRunham@users.noreply.github.com")  # shows Shane as contributor
         if subprocess.run(["git", "-C", repo, "fetch", "-q", url, "main"], capture_output=True).returncode == 0:
             git(repo, "reset", "-q", "--soft", "FETCH_HEAD")
     for entry in os.listdir(repo):

@@ -33,6 +33,7 @@ home-assistant/config/.HA_VERSION
 discord-bot/state.json
 discord-bot/history.json
 discord-bot/playtime.json
+discord-bot/wanted.json
 discord-bot/claude-workdir/
 *.db
 *.db-*

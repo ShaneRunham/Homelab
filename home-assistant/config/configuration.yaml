@@ -34,7 +34,7 @@ command_line:
       command: cat /config/homelab-state.json
       value_template: "{{ value_json.problems | count }}"
       unit_of_measurement: problems
-      json_attributes: [problems, morning, updated]
+      json_attributes: [problems, morning, updated, wanted]
       scan_interval: 60
   - sensor:
       name: Homelab services
@@ -197,6 +197,21 @@ template:
              or states('sensor.system_monitor_memory_usage') | float(0) > 90 }}
         delay_on: "00:03:00"
   - sensor:
+      # Wanted Level (2026-11-16, ~/homelab/discord-bot/wanted.py): the homelab's health as 0-5 stars. Attributes:
+      # evading (the level flashing for ~2 min after it clears, else 0), crimes (worst first), clean streak and record.
+      - name: Wanted level
+        unique_id: wanted_level
+        icon: mdi:star-four-points
+        state: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('stars', 0) }}"
+        availability: "{{ state_attr('sensor.homelab_state', 'wanted') is mapping }}"
+        attributes:
+          evading: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('evading', 0) }}"
+          crimes: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('crimes', []) }}"
+          clean_since: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('clean_since') }}"
+          best_clean: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('best_clean', 0) }}"
+          # up / down / evading (just dropped to 0) / clear (lost them, ~2 min later) / none this minute
+          change: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('change') }}"
+          evaded: "{{ (state_attr('sensor.homelab_state', 'wanted') or {}).get('evaded', 0) }}"
       - name: PS3 CPU temperature
         unique_id: ps3_cpu_temp
         unit_of_measurement: "°C"
@@ -307,5 +322,5 @@ panel_custom:
     url_path: vice
     sidebar_title: Vice
     sidebar_icon: mdi:palm-tree
-    module_url: /local/vice-panel/vice-panel.js?v=55
+    module_url: /local/vice-panel/vice-panel.js?v=57
     require_admin: false

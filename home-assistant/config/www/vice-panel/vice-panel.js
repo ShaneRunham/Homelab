@@ -15,7 +15,7 @@ const E = {
   cpu: "sensor.system_monitor_processor_use", temp: "sensor.system_monitor_processor_temperature",
   ram: "sensor.system_monitor_memory_usage", ssd: "sensor.system_monitor_disk_free",
   backups: "sensor.system_monitor_disk_free_mnt_storage",
-  weather: "weather.home", services: "sensor.homelab_services", problems: "sensor.homelab_state", person: "person.shane_runham",
+  weather: "weather.home", services: "sensor.homelab_services", problems: "sensor.homelab_state", wanted: "sensor.wanted_level", person: "person.shane_runham",
 };
 const INPUTS = [["Home", "Vice Home"], ["PS5", "PS5 Game Console"], ["Switch", "Nintendo Switch"], ["PS3", "PS3 Game Console"], ["Sky", "Sky Box"]];
 const WHITES = [["Warm", 2700], ["Neutral", 4000], ["Cool", 6500]];
@@ -92,6 +92,14 @@ svg{display:block}
 .info{display:inline-flex;align-items:center;gap:10px;font-size:17px;color:rgba(255,255,255,.78);margin-top:10px;flex-wrap:wrap;padding:6px 14px;margin-left:-14px;border-radius:12px;background:rgba(14,10,24,.42)}  /* backing: it crossed the figures (2026-11-16), as on the TV */
 .info b{color:#fff;font-weight:500}.info .sep{opacity:.5}
 .info span{display:flex;align-items:center;gap:10px}
+.wanted:empty{display:none}
+.info #wanted > span{gap:2px}  /* id: beats :host(.phone) .info span{gap:7px} */
+.info .wanted i{display:block;width:18px;height:18px}
+.info .wanted svg{width:18px;height:18px;opacity:1;fill:rgba(0,0,0,.25);stroke:rgba(255,255,255,.55);stroke-width:1.5}
+.info .wanted i.on svg{fill:#fff;stroke:#fff}
+.info .wanted .evading i.on svg{animation:evade .8s steps(1) infinite}
+@keyframes evade{50%{fill:rgba(0,0,0,.25);stroke:rgba(255,255,255,.55)}}
+.dot.gone{display:none}
 .info span.gta{display:block}  /* plain text flow: no flex gap inside "GTA VI in 7 days" */
 .info svg{width:20px;height:20px;opacity:.75;flex:none}
 .label{font-size:17px;font-weight:500;opacity:.92;margin-bottom:14px}
@@ -337,7 +345,7 @@ const HTML = `
   <div class="hero">
     <div class="date" id="date"></div>
     <div class="greet" id="greet"></div>
-    <div class="info"><span id="weather" class="tap" title="Weather details"></span><span class="sep gta">·</span><span id="gta" class="gta"></span><span class="sep">·</span><span><span class="dot" id="svcDot"></span><span id="svc"></span></span></div>
+    <div class="info"><span id="weather" class="tap" title="Weather details"></span><span class="sep gta">·</span><span id="gta" class="gta"></span><span class="sep">·</span><span><span class="wanted" id="wanted"></span><span class="dot" id="svcDot"></span><span id="svc"></span></span></div>
   </div>
   <div class="living">
     <div class="label">Bedroom</div>
@@ -968,8 +976,12 @@ class VicePanel extends HTMLElement {
       : `${WX[WX_ICON[this.state(E.weather)] || "cloud"]}<b>${Math.round(t)}°C</b> ${CONDITIONS[this.state(E.weather)] || this.state(E.weather)}`);
     // a problem from the homelab (the bot's checks, same list as the phone alerts) beats "All 6 services up"
     const probs = Object.values(this.attr(E.problems, "problems") || {});
-    this.putText("svc", probs.length ? problemLine(probs) : this.state(E.services));
-    this.$("svcDot").className = "dot" + (!probs.length && this.attr(E.services, "good") ? "" : " bad");
+    // Wanted Level (2026-11-16, ~/homelab/discord-bot/wanted.py): stars instead of the red dot; worst problem first
+    const stars = parseInt(this.state(E.wanted)) || 0, evading = this.attr(E.wanted, "evading") || 0;
+    const crimes = this.attr(E.wanted, "crimes") || [];
+    this.put("wanted", wantedStars(stars, evading));
+    this.putText("svc", probs.length ? problemLine(crimes.length ? [crimes[0].what, ...probs.slice(1)] : probs) : this.state(E.services));
+    this.$("svcDot").className = "dot" + (stars || evading ? " gone" : !probs.length && this.attr(E.services, "good") ? "" : " bad");
 
     // PS5: first line power, second line the game (playing now, else the last one HA remembers)
     const ps5On = this.state(E.ps5) === "on";
@@ -1077,6 +1089,12 @@ function cleanTitle(t) { return String(t || "").replace(/\s*[([][^)\]]*remaster[
 function time12(d) { const h = d.getHours(); return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; }
 // a problem message without its markdown or the command in brackets: "Container `x` is exited (Exited 2h)" -> "Container x is exited"
 function cleanProblem(m) { m = String(m).replace(/[`*]/g, "").split(/\.\s/)[0].replace(/\s*\((?:[^()]|\([^()]*\))*\)\s*$/, ""); return m.length > 60 ? m.slice(0, 58).replace(/[\s,;:]+\S*$/, "") + "…" : m; }  // cut at a word
+const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z"/></svg>';
+function wantedStars(n, evading) {  // same as Vice Home (~/tv-launcher/vice/vice.js)
+  const lit = n || evading;
+  if (!lit) return "";
+  return `<span class="${n ? "" : "evading"}">` + [0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? "on" : ""}">${STAR}</i>`).join("") + "</span>";
+}
 function problemLine(list) { return cleanProblem(list[0]) + (list.length > 1 ? ` · +${list.length - 1} more` : ""); }
 function known(v) { return v && !["None", "unavailable", "unknown", ""].includes(v) ? v : null; }
 // "PS5 Game Console" -> "PS5", "ITVX - fresh, free streaming" -> "ITVX", "Tubi: Free Movies & TV" -> "Tubi"

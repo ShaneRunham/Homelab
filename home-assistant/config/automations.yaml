@@ -45,6 +45,7 @@
     - variables:
         old: "{{ trigger.from_state.attributes.problems or {} }}"
         new: "{{ trigger.to_state.attributes.problems or {} }}"
+        stars: "{{ (trigger.to_state.attributes.wanted or {}).get('stars', 0) | int }}"
     - repeat:
         for_each: "{{ new.keys() | reject('in', old.keys()) | list }}"
         sequence:
@@ -58,7 +59,8 @@
                 {%- else %}[]{% endif %}
           - action: notify.mobile_app_pixel_9_pro_xl
             data:
-              title: Heads up, Shane
+              # Wanted Level (2026-11-16): "★★ Wanted" instead of "Heads up, Shane"
+              title: "{{ ('★' * stars ~ '☆' * (5 - stars) ~ '  Wanted') if stars else 'Heads up, Shane' }}"
               message: "{{ new[key] | replace('`', '') | replace('**', '') }}"
               data:
                 tag: "{{ 'alert-' ~ (key | slugify) }}"
@@ -102,7 +104,8 @@
             data:
               title: "{{ m }}"
               line: Homelab
-              em: Heads up
+              # Wanted Level (2026-11-16): the stars instead of "Heads up"
+              em: "{% set n = (trigger.to_state.attributes.wanted or {}).get('stars', 0) | int %}{{ ('★' * n ~ '☆' * (5 - n)) if n else 'Heads up' }}"
               icon: server
               dot: bad
               ttl: 12
@@ -112,7 +115,7 @@
             then:
               - action: notify.lg_webos_tv_55qned87a6b_bekfljp
                 data:
-                  message: "Heads up: {{ m[:90] ~ ('…' if m | length > 90 else '') }}"
+                  message: "{% set n = (trigger.to_state.attributes.wanted or {}).get('stars', 0) | int %}{{ ('★' * n ~ '☆' * (5 - n) ~ ' Wanted') if n else 'Heads up' }}: {{ m[:90] ~ ('…' if m | length > 90 else '') }}"
 
 - id: vice_osd_pixel_ringing
   alias: Vice OSD - Pixel ringing on the TV
@@ -292,3 +295,61 @@
           {% set a = trigger.to_state.attributes %}
           {% set m = ((a.get('android.title') or '') ~ ': ' ~ (a.get('android.text') or '')).strip(': ') %}
           PS5: {{ m[:90] ~ ('…' if m | length > 90 else '') }}
+
+# Wanted Level (2026-11-16, ~/homelab/discord-bot/wanted.py). New problems already ping the phone and the TV above
+# (with the stars); this adds heat rising on the same problems (left unfixed an hour) and "Lost them" when it clears.
+# Quiet 23:00-08:00: Discord #alerts and the sensor only.
+- id: wanted_level_changes
+  alias: Wanted level - heat rising and lost them
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: sensor.wanted_level
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state | is_number and trigger.to_state.state | is_number }}"
+    - "{{ trigger.to_state.attributes.change in ['up', 'clear'] }}"
+    - condition: time
+      after: "08:00:00"
+      before: "23:00:00"
+  actions:
+    - variables:
+        was: "{{ trigger.from_state.state | int }}"
+        now_: "{{ trigger.to_state.state | int }}"
+        crimes: "{{ trigger.to_state.attributes.crimes or [] }}"
+        stars: "{{ '★' * now_ ~ '☆' * (5 - now_) }}"
+    - choose:
+        - conditions: "{{ now_ > was and crimes | count == (trigger.from_state.attributes.crimes or []) | count }}"
+          sequence:
+            - action: notify.mobile_app_pixel_9_pro_xl
+              data:
+                title: "{{ stars }}  Heat rising"
+                message: "Still not fixed: {{ crimes[0].what }}"
+                data:
+                  tag: wanted-heat
+                  channel: Alerts
+                  importance: high
+            - if: "{{ states('media_player.lg_tv') not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+              then:
+                - action: script.vice_osd
+                  data:
+                    title: "{{ crimes[0].what }}"
+                    line: Heat rising
+                    em: "{{ stars }}"
+                    icon: server
+                    dot: bad
+                    ttl: 12
+                  continue_on_error: true
+        # "clear" comes ~2 min after the drop (the stars flash meanwhile); the state trigger fires on attribute changes too
+        - conditions: "{{ now_ == 0 and trigger.to_state.attributes.change == 'clear' and trigger.from_state.attributes.change != 'clear' }}"
+          sequence:
+            - if: "{{ states('media_player.lg_tv') not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+              then:
+                - action: script.vice_osd
+                  data:
+                    title: Lost them
+                    line: Wanted level cleared
+                    em: "{% set e = trigger.to_state.attributes.evaded | int(0) %}{{ '★' * e ~ '☆' * (5 - e) }}"
+                    sub: Everything's running again
+                    icon: server
+                    ttl: 10
+                  continue_on_error: true

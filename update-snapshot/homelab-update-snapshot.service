@@ -1,0 +1,15 @@
+[Unit]
+Description=Snapshot / before the offline update installs (homelab)
+DefaultDependencies=no
+Requires=sysinit.target
+After=sysinit.target local-fs.target
+Before=system-update-pre.target packagekit-offline-update.service dnf5-offline-transaction.service
+ConditionPathExists=/system-update
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-update-snapshot
+TimeoutStartSec=300
+
+[Install]
+WantedBy=system-update.target

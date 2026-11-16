@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Mirrors every commit to the local Forgejo (https://fedora.tailnet.ts.net:8448) in the background.
+# Never blocks or fails the commit: if Forgejo is down, the next commit's push catches up.
+git remote get-url forgejo >/dev/null 2>&1 || exit 0
+(git push -q forgejo --all >/dev/null 2>&1 &)
+# Cleaned public copies on GitHub (homelab and tv-launcher, 2026-11-16): see tools/publish-public.py
+(~/homelab/tools/publish-public.py "$PWD" >>~/.local/share/public-mirrors.log 2>&1 &)
+exit 0

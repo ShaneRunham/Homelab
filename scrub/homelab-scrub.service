@@ -1,0 +1,11 @@
+[Unit]
+Description=Btrfs scrub of the boot disk and RAID1, post errors to Discord
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-scrub
+# Low priority, so the PC stays responsive while the disks are read.
+Nice=19
+IOSchedulingClass=idle

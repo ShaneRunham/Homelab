@@ -1,0 +1,11 @@
+[Unit]
+Description=JARVIS: Claude as Home Assistant's conversation agent (Wyoming, 127.0.0.1:10400)
+
+[Service]
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=%h/.local/share/jarvis-venv/bin/python %h/homelab/jarvis-assist/claude-wyoming.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

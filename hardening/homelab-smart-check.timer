@@ -1,0 +1,9 @@
+[Unit]
+Description=Check disk health daily, after the backup and update
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,311 @@
+# Loads the standard integrations (frontend, mobile_app, history, etc.).
+default_config:
+
+# HA's Bluetooth isn't used (the light goes through govee-bridge) and has no adapter rights in the container, so its
+# manager logs an error with a traceback at every start. Hide just that logger (2026-11-12).
+logger:
+  logs:
+    habluetooth.manager: critical
+
+# Web server settings (listen on 127.0.0.1 only, trust 127.0.0.1/::1 as proxy for `tailscale serve` :8445)
+# were migrated by HA into .storage/http (2026.11); edit them in Settings > System > Network, not here.
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# Lets HA turn the LG TV on (webOS can only turn itself off). Needs "Turn on via Wi-Fi" on the TV.
+wake_on_lan:
+
+# PS5: ps5-mqtt handles state and rest mode; waking goes through this script (see scripts/ps5_wake.py).
+shell_command:
+  ps5_wake: python3 /config/scripts/ps5_wake.py
+  ps3_shutdown: python3 /config/scripts/ps3.py shutdown
+  ps3_popup: python3 /config/scripts/ps3.py popup {{ message }}
+  # Game art for the Vice panel (automation vice_save_cover); name is urlencoded so quotes in titles are safe.
+  save_cover: python3 /config/scripts/cover.py {{ kind }} {{ name | urlencode }} {{ url }}
+
+# PS3 through webMAN (scripts/ps3.py: same read-only calls as the Discord bot). Never config/theme/fan writes.
+command_line:
+  # Problems and the morning summary, written every minute by the Discord bot (homelab/discord-bot, export_for_ha).
+  - sensor:
+      name: Homelab state
+      unique_id: homelab_state
+      command: cat /config/homelab-state.json
+      value_template: "{{ value_json.problems | count }}"
+      unit_of_measurement: problems
+      json_attributes: [problems, morning, updated]
+      scan_interval: 60
+  - sensor:
+      name: Homelab services
+      unique_id: homelab_services
+      command: python3 /config/scripts/services.py
+      value_template: "{{ value_json.line }}"
+      json_attributes: [good]
+      scan_interval: 60
+  - sensor:
+      name: PS3 status
+      unique_id: ps3_status
+      command: python3 /config/scripts/ps3.py status
+      value_template: "{{ value_json.power }}"
+      json_attributes: [webman, cpu, rsx, fan, game]
+      scan_interval: 30
+      command_timeout: 20
+  # Nintendo Switch OLED (192.168.0.99, on TV HDMI 2 since 2026-11-16): no local API, so awake = answers ping.
+  # Screen time comes from the Nintendo Switch Parental Controls integration (cloud, set up in the UI).
+  - binary_sensor:
+      name: Nintendo Switch
+      unique_id: nintendo_switch_awake
+      device_class: power
+      command: ping -c2 -W1 192.168.0.99 >/dev/null && echo on || echo off
+      payload_on: "on"
+      payload_off: "off"
+      scan_interval: 30
+      command_timeout: 10
+
+# Govee H6008 through the PC's govee-bridge (~/homelab/govee-bridge, 127.0.0.1:5402). Bluetooth-only bulb.
+rest_command:
+  # PC buttons through the PC's pc-actions helper (~/homelab/pc-actions, 127.0.0.1:5403).
+  pc_lock:
+    url: http://127.0.0.1:5403/lock
+    method: post
+  pc_vscode:
+    url: http://127.0.0.1:5403/vscode
+    method: post
+  pc_poweroff:
+    url: http://127.0.0.1:5403/poweroff
+    method: post
+  # Restart buttons on alert notifications: what = restart-container/<name> or restart-unit/<unit> (validated by pc-actions)
+  pc_restart:
+    url: "http://127.0.0.1:5403/{{ what }}"
+    method: post
+    timeout: 60
+  govee:
+    url: http://127.0.0.1:5402/run
+    method: post
+    content_type: application/json
+    payload: '{"cmds": {{ cmds | tojson }}}'
+    timeout: 60
+  # Vice OSD pop-up on Vice Home (vice-tv, ~/tv-launcher/vice-layer-plan.md). Queued only while Vice Home is on
+  # screen: the response says {"shown": true/false}, so callers fall back to the TV's own toast.
+  vice_osd:
+    url: http://127.0.0.1:5401/api/osd
+    method: post
+    headers:
+      Authorization: !secret vice_tv_auth
+    content_type: application/json
+    payload: >-
+      {{ {"title": title, "line": line | default(""), "em": em | default(""), "sub": sub | default(""),
+          "icon": icon | default("bell"), "dot": dot | default(""), "ttl": ttl | default(8), "tag": tag | default("")} | tojson }}
+    timeout: 5
+  vice_osd_clear:
+    url: http://127.0.0.1:5401/api/osd/clear
+    method: post
+    headers:
+      Authorization: !secret vice_tv_auth
+    content_type: application/json
+    payload: '{{ {"tag": tag} | tojson }}'
+    timeout: 5
+
+template:
+  # Vice OSD (2026-11-14): the latest card from script.vice_osd, for the Vice panel's banner. State = when it was sent.
+  - trigger:
+      - trigger: event
+        event_type: vice_osd
+    sensor:
+      - name: Vice OSD
+        unique_id: vice_osd
+        icon: mdi:message-badge-outline
+        state: "{{ now().isoformat() }}"
+        attributes:
+          title: "{{ trigger.event.data.title }}"
+          line: "{{ trigger.event.data.line }}"
+          em: "{{ trigger.event.data.em }}"
+          sub: "{{ trigger.event.data.sub }}"
+          kind: "{{ trigger.event.data.icon }}"  # server/phone/bell/radio ("icon" is taken by HA's own entity icon)
+          dot: "{{ trigger.event.data.dot }}"
+          ttl: "{{ trigger.event.data.ttl }}"
+          tag: "{{ trigger.event.data.tag }}"
+  # ... and the latest tag taken off again (script.vice_osd_clear), so the panel drops that banner
+  - trigger:
+      - trigger: event
+        event_type: vice_osd_clear
+    sensor:
+      - name: Vice OSD clear
+        unique_id: vice_osd_clear
+        icon: mdi:message-badge-outline
+        state: "{{ now().isoformat() }}"
+        attributes:
+          tag: "{{ trigger.event.data.tag }}"
+  # GTA VI play time for launch-day mode (2026-11-12): +1 every minute the PS5 / PSN shows GTA VI as the game being
+  # played. Trigger-based, so the total survives restarts. Read by the Vice panel and Vice Home (vice-tv /api/gta6).
+  - trigger:
+      - trigger: time_pattern
+        minutes: "/1"
+    sensor:
+      - name: GTA VI minutes played
+        unique_id: gta6_minutes_played
+        icon: mdi:controller
+        unit_of_measurement: min
+        state_class: total_increasing
+        state: >
+          {% set t = (states('sensor.mypsnname_now_playing') ~ ' ' ~ (state_attr('media_player.playstation_5', 'media_title') or '')) | lower %}
+          {{ (this.state | int(0)) + (1 if t is search('grand theft auto vi\\b|\\bgta vi\\b|\\bgta 6\\b') else 0) }}
+  # The bulb can't report its state, so HA shows what it last sent (optimistic).
+  - light:
+      - name: Ceiling light
+        unique_id: govee_ceiling_light
+        icon: mdi:ceiling-light
+        min_mireds: 153
+        max_mireds: 370
+        turn_on:
+          - action: rest_command.govee
+            data:
+              cmds: [["on"]]
+        turn_off:
+          - action: rest_command.govee
+            data:
+              cmds: [["off"]]
+        set_level:
+          - action: script.turn_on
+            target: {entity_id: script.ceiling_light_send}
+            data:
+              variables:
+                cmds: "{{ [['on'], ['brightness', [1, (brightness / 255 * 100) | round | int] | max]] }}"
+        set_rgb:
+          - action: script.turn_on
+            target: {entity_id: script.ceiling_light_send}
+            data:
+              variables:
+                cmds: "{{ [['on'], ['color', r | int, g | int, b | int]] }}"
+        set_temperature:
+          - action: script.turn_on
+            target: {entity_id: script.ceiling_light_send}
+            data:
+              variables:
+                cmds: "{{ [['on'], ['white', (1000000 / color_temp) | int]] }}"
+  - binary_sensor:
+      - name: Homelab reporting
+        unique_id: homelab_reporting
+        device_class: connectivity
+        state: "{{ (as_timestamp(now()) - (state_attr('sensor.homelab_state', 'updated') or 0)) < 300 }}"
+      # Vice panel's PC note says "Busy" only after 3 minutes of high CPU or memory (a short spike isn't news).
+      - name: PC busy
+        unique_id: pc_busy
+        state: >
+          {{ states('sensor.system_monitor_processor_use') | float(0) > 85
+             or states('sensor.system_monitor_memory_usage') | float(0) > 90 }}
+        delay_on: "00:03:00"
+  - sensor:
+      - name: PS3 CPU temperature
+        unique_id: ps3_cpu_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state: "{{ state_attr('sensor.ps3_status', 'cpu') }}"
+        availability: "{{ state_attr('sensor.ps3_status', 'cpu') is number }}"
+      - name: PS3 RSX temperature
+        unique_id: ps3_rsx_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state: "{{ state_attr('sensor.ps3_status', 'rsx') }}"
+        availability: "{{ state_attr('sensor.ps3_status', 'rsx') is number }}"
+      - name: PS3 fan
+        unique_id: ps3_fan
+        unit_of_measurement: "%"
+        icon: mdi:fan
+        state: "{{ state_attr('sensor.ps3_status', 'fan') }}"
+        availability: "{{ state_attr('sensor.ps3_status', 'fan') is number }}"
+      - name: PS3 last game
+        unique_id: ps3_last_game
+        icon: mdi:gamepad-variant
+        state: "{{ state_attr('sensor.ps3_status', 'game') or 'None' }}"
+        availability: "{{ is_state('sensor.ps3_status', 'on') }}"
+  # The light's last brightness and colour, kept while it's off (the bulb comes back on at them), for the Vice panel.
+  - triggers:
+      - trigger: state
+        entity_id: light.ceiling_light
+      - trigger: homeassistant
+        event: start
+    sensor:
+      - name: Ceiling light last
+        unique_id: ceiling_light_last
+        unit_of_measurement: "%"
+        state: >
+          {% set b = state_attr('light.ceiling_light', 'brightness') %}
+          {{ ((b / 255 * 100) | round | int) if b else this.state }}
+        attributes:
+          color_mode: >
+            {{ state_attr('light.ceiling_light', 'color_mode') or this.attributes.get('color_mode') }}
+          kelvin: >
+            {{ state_attr('light.ceiling_light', 'color_temp_kelvin') or this.attributes.get('kelvin') }}
+          rgb: >
+            {{ state_attr('light.ceiling_light', 'rgb_color') or this.attributes.get('rgb') }}
+  # Last game played on each console, kept after it stops (trigger-based, so HA restores it on restart).
+  # Seed or correct one by firing event vice_last_game {kind: ps5|ps3, name: ...}.
+  - triggers:
+      - trigger: state
+        entity_id: media_player.playstation_5
+        attribute: media_title
+        id: psn
+      - trigger: event
+        event_type: vice_last_game
+        event_data: {kind: ps5}
+        id: seed
+    sensor:
+      - name: PS5 last game
+        unique_id: ps5_last_game
+        icon: mdi:gamepad-variant
+        state: >
+          {% set n = trigger.event.data.name if trigger.id == 'seed'
+             else (trigger.to_state.attributes.media_title if trigger.to_state else none) %}
+          {{ n if n else this.state }}
+  - triggers:
+      - trigger: state
+        entity_id: sensor.ps3_status
+        attribute: game
+        id: webman
+      - trigger: event
+        event_type: vice_last_game
+        event_data: {kind: ps3}
+        id: seed
+    sensor:
+      - name: PS3 last played
+        unique_id: ps3_last_played
+        icon: mdi:gamepad-variant
+        state: >
+          {% set n = trigger.event.data.name if trigger.id == 'seed'
+             else (trigger.to_state.attributes.game if trigger.to_state else none) %}
+          {{ n if n else this.state }}
+  - switch:
+      # Same design as the PS5 toggle. The PS3 has no network wake, so On only explains that.
+      - name: PS3
+        unique_id: ps3_power_toggle
+        icon: mdi:sony-playstation
+        state: "{{ is_state('sensor.ps3_status', 'on') }}"
+        turn_on:
+          - action: persistent_notification.create
+            data:
+              title: PS3
+              message: The PS3 can't be turned on over the network. Use its power button, then enable HEN.
+        turn_off:
+          - action: shell_command.ps3_shutdown
+      - name: PS5
+        unique_id: ps5_power_toggle
+        icon: mdi:sony-playstation
+        state: "{{ is_state('switch.ps5_power', 'on') }}"
+        availability: "{{ has_value('switch.ps5_power') }}"
+        turn_on:
+          - action: shell_command.ps5_wake
+        turn_off:
+          - action: switch.turn_off
+            target:
+              entity_id: switch.ps5_power
+
+# The Vice panel (www/vice-panel): same look as Vice Home on the TV. Uses the logged-in user's session.
+panel_custom:
+  - name: vice-panel
+    url_path: vice
+    sidebar_title: Vice
+    sidebar_icon: mdi:palm-tree
+    module_url: /local/vice-panel/vice-panel.js?v=55
+    require_admin: false

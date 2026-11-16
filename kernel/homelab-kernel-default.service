@@ -1,0 +1,6 @@
+[Unit]
+Description=Publish the GRUB default kernel to /run/kernel-default (the homelab bot can't read /boot)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'grubby --default-kernel > /run/kernel-default.tmp && mv /run/kernel-default.tmp /run/kernel-default'

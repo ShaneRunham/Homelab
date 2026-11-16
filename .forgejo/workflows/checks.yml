@@ -1,0 +1,59 @@
+# Runs on the local Forgejo runner (README › Forgejo) after every push. Results: ✓/✗ next to each commit
+# at https://fedora.tailnet.ts.net:8448/shane/homelab, and the Discord bot reports a failed run.
+# No actions/checkout (needs Node and the internet): each job downloads the commit's archive from Forgejo.
+on: [push]
+
+defaults:
+  run:
+    shell: sh
+
+env:
+  FETCH: >-
+    wget -qO- --header="Authorization: token ${{ forgejo.token }}"
+    "http://forgejo:3000/api/v1/repos/${{ forgejo.repository }}/archive/${{ forgejo.sha }}.tar.gz"
+    | tar xz --strip-components=1
+
+jobs:
+  bot-tests:
+    runs-on: docker
+    container: { image: "python:3.14-alpine" }
+    steps:
+      - run: eval "$FETCH"
+      - run: pip install -q --root-user-action=ignore -r discord-bot/requirements.txt
+      - name: Stand-in for the PC's Adwaita Sans font (graphs.py loads it on import)
+        run: |
+          mkdir -p /usr/share/fonts/adwaita-sans-fonts
+          cp "$(python -c 'import matplotlib, os; print(os.path.join(matplotlib.get_data_path(), "fonts/ttf/DejaVuSans.ttf"))')" \
+             /usr/share/fonts/adwaita-sans-fonts/AdwaitaSans-Regular.ttf
+      - run: cd discord-bot && python -m unittest discover -s tests
+      - run: pip install -q --root-user-action=ignore pyflakes && python -m pyflakes discord-bot/*.py
+
+  compose:
+    # A broken compose.yaml would stop the 04:00 image update from recreating containers.
+    runs-on: docker
+    container: { image: "docker:29-cli" }
+    steps:
+      - run: eval "$FETCH"
+      - run: docker compose config -q 2>&1 | grep -v 'variable is not set' || true; docker compose config -q 2>/dev/null
+
+  shellcheck:
+    # Fails on errors only; warnings are printed.
+    runs-on: docker
+    container: { image: "koalaman/shellcheck-alpine:stable" }
+    steps:
+      - run: eval "$FETCH"
+      - run: |
+          f=$(find . -type f -not -path "*/node_modules/*" -not -path "*/www/*" | while read -r x; do
+                head -n1 "$x" 2>/dev/null | grep -qE '^#!.*/(env )?(ba)?sh' && echo "$x"; done)
+          shellcheck -S warning -f gcc $f || true
+          shellcheck -S error $f
+
+  home-assistant:
+    # HA's own check against the committed config, in the same image HA runs.
+    runs-on: docker
+    container: { image: "ghcr.io/home-assistant/home-assistant:stable" }
+    steps:
+      - run: eval "$FETCH"
+      # secrets.yaml is gitignored: the committed example has the same keys with placeholder values
+      - run: cp home-assistant/config/secrets.example.yaml home-assistant/config/secrets.yaml
+      - run: python -m homeassistant --script check_config --config home-assistant/config

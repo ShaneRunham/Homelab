@@ -1,0 +1,7 @@
+[Unit]
+Description=Ping healthchecks.io so it can alert if the PC goes silent
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/shanerunham/homelab/heartbeat/heartbeat.sh

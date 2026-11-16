@@ -1,0 +1,9 @@
+[Unit]
+Description=Nightly git catch-up commit (before the 03:30 backup)
+
+[Timer]
+OnCalendar=*-*-* 03:20
+Persistent=true
+
+[Install]
+WantedBy=timers.target

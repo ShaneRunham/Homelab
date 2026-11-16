@@ -1,0 +1,294 @@
+- id: lg_tv_turn_on
+  alias: LG TV - turn on with Wake-on-LAN
+  description: The webOS integration can't power the TV on, so send it a magic packet.
+  triggers:
+    - trigger: webostv.turn_on
+      entity_id: media_player.lg_tv
+  actions:
+    - action: wake_on_lan.send_magic_packet
+      data:
+        mac: 00:00:00:00:00:00
+        broadcast_address: 192.168.0.255
+- id: tablet_panel_on_charge
+  alias: Tablet - show the Vice panel when it's plugged in
+  description: Stay awake while charging is on in the tablet's developer options, so the panel stays up until unplugged.
+  triggers:
+    - trigger: state
+      entity_id: sensor.honor_pad_10_charger_type
+      from: none
+  conditions:
+    - condition: not
+      conditions:
+        - condition: state
+          entity_id: sensor.honor_pad_10_charger_type
+          state: [none, unavailable, unknown]
+  actions:
+    - action: notify.mobile_app_honor_pad_10
+      data:
+        message: command_screen_on
+    - action: notify.mobile_app_honor_pad_10
+      data:
+        message: command_webview
+        data:
+          command: /vice
+# ---- Moved from the Discord bot on 2026-11-11: alerts, morning summary (bot writes homelab-state.json) ----
+- id: homelab_alerts
+  alias: Homelab - alert on new and cleared problems
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: sensor.homelab_state
+      attribute: problems
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+  actions:
+    - variables:
+        old: "{{ trigger.from_state.attributes.problems or {} }}"
+        new: "{{ trigger.to_state.attributes.problems or {} }}"
+    - repeat:
+        for_each: "{{ new.keys() | reject('in', old.keys()) | list }}"
+        sequence:
+          - variables:
+              key: "{{ repeat.item }}"
+              # Action buttons: restart a stopped container or user service; open Sony's page for the PSN login
+              buttons: >-
+                {% if key.startswith('container:') %}[{"action": "RESTART|restart-container/{{ key[10:] }}", "title": "Restart"}]
+                {%- elif key.startswith('user:') %}[{"action": "RESTART|restart-unit/{{ key[5:] }}", "title": "Restart"}]
+                {%- elif key == 'psn' %}[{"action": "URI", "title": "Renew", "uri": "https://ca.account.sony.com/api/v1/ssocookie"}]
+                {%- else %}[]{% endif %}
+          - action: notify.mobile_app_pixel_9_pro_xl
+            data:
+              title: Heads up, Shane
+              message: "{{ new[key] | replace('`', '') | replace('**', '') }}"
+              data:
+                tag: "{{ 'alert-' ~ (key | slugify) }}"
+                channel: Alerts
+                importance: high
+                actions: "{{ buttons }}"
+    - repeat:
+        for_each: "{{ old.keys() | reject('in', new.keys()) | list }}"
+        sequence:
+          - action: notify.mobile_app_pixel_9_pro_xl
+            data:
+              title: Sorted
+              message: "{{ old[repeat.item] | replace('`', '') | replace('**', '') }}"
+              data:
+                tag: "{{ 'alert-' ~ (repeat.item | slugify) }}"
+                channel: Alerts
+
+# TV pop-up (2026-11-12): the same new problems, as a webOS toast on the LG while it's on. Phone alerts above are unchanged.
+- id: homelab_alerts_tv
+  alias: Homelab - show new problems on the TV
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: sensor.homelab_state
+      attribute: problems
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+    - "{{ states('media_player.lg_tv') not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+  actions:
+    - repeat:
+        for_each: >-
+          {% set old = trigger.from_state.attributes.problems or {} %}
+          {{ (trigger.to_state.attributes.problems or {}).items() | rejectattr(0, 'in', old.keys()) | map(attribute=1) | list }}
+        sequence:
+          # plain text, without the command in brackets
+          - variables:
+              m: >-
+                {{ (repeat.item | replace('`', '') | replace('**', '')).split('. ')[0] | regex_replace('\\s*\\((?:[^()]|\\([^()]*\\))*\\)\\s*$', '') }}
+          # a Vice OSD card when Vice Home is on screen (2026-11-14, vice-layer-plan.md), else the TV's own toast
+          - action: script.vice_osd
+            data:
+              title: "{{ m }}"
+              line: Homelab
+              em: Heads up
+              icon: server
+              dot: bad
+              ttl: 12
+            response_variable: osd
+            continue_on_error: true
+          - if: "{{ not (osd is defined and osd.shown) }}"
+            then:
+              - action: notify.lg_webos_tv_55qned87a6b_bekfljp
+                data:
+                  message: "Heads up: {{ m[:90] ~ ('…' if m | length > 90 else '') }}"
+
+- id: vice_osd_pixel_ringing
+  alias: Vice OSD - Pixel ringing on the TV
+  description: A Vice OSD card on the LG (over anything) when the Pixel rings; the TV's own toast if that fails. 2026-11-14, ~/tv-launcher/vice-layer-plan.md
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: sensor.pixel_9_pro_xl_phone_state
+      to: ringing
+  conditions:
+    - "{{ states('media_player.lg_tv') not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+  actions:
+    - action: script.vice_osd
+      data:
+        title: Your Pixel is ringing
+        line: Pixel
+        em: Incoming call
+        icon: phone
+        ttl: 15
+        tag: pixel_ring
+      response_variable: osd
+      continue_on_error: true
+    - if: "{{ not (osd is defined and osd.shown) }}"
+      then:
+        - action: notify.lg_webos_tv_55qned87a6b_bekfljp
+          data:
+            message: Your Pixel is ringing
+
+- id: vice_osd_pixel_ring_end
+  alias: Vice OSD - Pixel stopped ringing
+  description: Takes the "Your Pixel is ringing" card off the TV and the Vice panel once the call is answered or missed.
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: sensor.pixel_9_pro_xl_phone_state
+      from: ringing
+  actions:
+    - action: script.vice_osd_clear
+      data:
+        tag: pixel_ring
+
+- id: homelab_reporting_lost
+  alias: Homelab - alert if the bot stops reporting
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.homelab_reporting
+      to: "off"
+      for: "00:02:00"
+    - trigger: state
+      entity_id: binary_sensor.homelab_reporting
+      from: "off"
+      to: "on"
+  actions:
+    - action: notify.mobile_app_pixel_9_pro_xl
+      data:
+        title: "{{ 'Heads up, Shane' if trigger.to_state.state == 'off' else 'Sorted' }}"
+        message: >-
+          {{ 'The Discord bot has stopped reporting, so homelab alerts are paused (systemctl --user status homelab-bot).'
+             if trigger.to_state.state == 'off' else 'The Discord bot is reporting again; alerts are back on.' }}
+        data:
+          tag: alert-bot-reporting
+          channel: Alerts
+
+- id: morning_summary
+  alias: Morning summary at 08:00
+  # Also sent late (until noon) when the bot writes today's summary after 08:00, e.g. if it was down at 07:55
+  triggers:
+    - trigger: time
+      at: "08:00:00"
+    - trigger: state
+      entity_id: sensor.homelab_state
+      attribute: morning
+  conditions:
+    - "{{ (state_attr('sensor.homelab_state', 'morning') or {}).get('date') == now().date().isoformat() }}"
+    - >-
+      {{ trigger.platform == 'time' or (
+           now().hour >= 8 and now().hour < 12
+           and trigger.from_state is not none and trigger.from_state.state not in ['unavailable', 'unknown']
+           and (trigger.from_state.attributes.morning or {}).get('date') != now().date().isoformat()) }}
+  actions:
+    - action: notify.mobile_app_pixel_9_pro_xl
+      data:
+        title: Morning, Shane
+        message: "{{ state_attr('sensor.homelab_state', 'morning').text | replace('`', '') | replace('**', '') }}"
+        data:
+          tag: morning
+          channel: Morning summary
+
+- id: leaving_home_all_off
+  alias: Leaving home - turn everything off
+  triggers:
+    - trigger: state
+      entity_id: person.shane_runham
+      from: home
+      to: not_home
+  actions:
+    - variables:
+        was_on: >-
+          {% set ns = namespace(l=[]) %}
+          {% if states('media_player.lg_tv') not in ['off', 'unavailable', 'unknown'] %}{% set ns.l = ns.l + ['TV'] %}{% endif %}
+          {% if is_state('switch.ps5', 'on') %}{% set ns.l = ns.l + ['PS5'] %}{% endif %}
+          {% if is_state('switch.ps3', 'on') %}{% set ns.l = ns.l + ['PS3'] %}{% endif %}
+          {% if is_state('light.ceiling_light', 'on') %}{% set ns.l = ns.l + ['the light'] %}{% endif %}
+          {{ ns.l }}
+    - action: media_player.turn_off
+      target: {entity_id: media_player.lg_tv}
+      continue_on_error: true
+    - if: [{condition: state, entity_id: switch.ps5, state: "on"}]
+      then: [{action: switch.turn_off, target: {entity_id: switch.ps5}, continue_on_error: true}]
+    - if: [{condition: state, entity_id: switch.ps3, state: "on"}]
+      then: [{action: switch.turn_off, target: {entity_id: switch.ps3}, continue_on_error: true}]
+    - action: light.turn_off
+      target: {entity_id: light.ceiling_light}
+      continue_on_error: true
+    - if: "{{ was_on | count > 0 }}"
+      then:
+        - action: notify.mobile_app_pixel_9_pro_xl
+          data:
+            title: You've left home
+            message: "Turned off: {{ was_on | join(', ') }}."
+
+- id: alert_button_restart
+  alias: Alert buttons - restart what the notification names
+  mode: queued
+  triggers:
+    - trigger: event
+      event_type: mobile_app_notification_action
+  conditions:
+    - "{{ trigger.event.data.action.startswith('RESTART|') }}"
+  actions:
+    - variables:
+        what: "{{ trigger.event.data.action.split('|', 1)[1] }}"
+    - action: rest_command.pc_restart
+      data: {what: "{{ what }}"}
+      response_variable: r
+      continue_on_error: true
+    - action: notify.mobile_app_pixel_9_pro_xl
+      data:
+        title: "{{ 'Restarted' if r is defined and r.status == 200 else 'Restart failed' }}"
+        message: "{{ what.split('/', 1)[1] }}"
+
+- id: vice_save_cover
+  alias: Vice panel - save the last game's art
+  description: Keeps a copy of each console's last game art in www/vice-panel/covers for the Vice panel.
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: [sensor.ps5_last_game, sensor.ps3_last_played]
+  conditions:
+    - "{{ trigger.to_state.state not in ['unknown', 'unavailable', ''] }}"
+  actions:
+    - action: shell_command.save_cover
+      data:
+        kind: "{{ 'ps5' if trigger.entity_id == 'sensor.ps5_last_game' else 'ps3' }}"
+        name: "{{ trigger.to_state.state }}"
+        url: "{{ state_attr('media_player.playstation_5', 'entity_picture') or 'None' }}"
+
+- id: ps5_download_done_tv
+  alias: PS5 - show finished downloads on the TV
+  # The PlayStation App on the Pixel posts "download complete" (Sony only promises it for downloads started from the
+  # app). The companion app's Last notification sensor passes on the PlayStation App's notifications only (allow list
+  # com.scee.psxandroid, set on the phone), and this shows the finished ones as a pop-up on the LG while it's on.
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: sensor.pixel_9_pro_xl_last_notification
+  conditions:
+    - "{{ trigger.to_state is not none and trigger.to_state.attributes.package == 'com.scee.psxandroid' }}"
+    - >-
+      {% set t = (trigger.to_state.attributes.get('android.title', '') ~ ' ' ~ trigger.to_state.attributes.get('android.text', '')) | lower %}
+      {{ t is search('download') and t is search('complete|finished|ready|downloaded') }}
+    - "{{ states('media_player.lg_tv') not in ['off', 'standby', 'unavailable', 'unknown'] }}"
+  actions:
+    - action: notify.lg_webos_tv_55qned87a6b_bekfljp
+      data:
+        message: >-
+          {% set a = trigger.to_state.attributes %}
+          {% set m = ((a.get('android.title') or '') ~ ': ' ~ (a.get('android.text') or '')).strip(': ') %}
+          PS5: {{ m[:90] ~ ('…' if m | length > 90 else '') }}

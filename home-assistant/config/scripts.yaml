@@ -1,0 +1,148 @@
+# Moved from the Discord bot (scenes.py) on 2026-11-11.
+game_night:
+  alias: Game night
+  icon: mdi:controller
+  description: Purple light at 60%, TV on and over to the PS5 (HDMI 1), PS5 woken.
+  sequence:
+    - action: light.turn_on
+      target: {entity_id: light.ceiling_light}
+      data: {rgb_color: [176, 38, 255], brightness_pct: 60}
+      continue_on_error: true
+    - if: [{condition: state, entity_id: switch.ps5, state: "off"}]
+      then: [{action: switch.turn_on, target: {entity_id: switch.ps5}, continue_on_error: true}]
+    - action: media_player.turn_on
+      target: {entity_id: media_player.lg_tv}
+    - wait_template: "{{ is_state('media_player.lg_tv', 'on') or is_state('media_player.lg_tv', 'playing') }}"
+      timeout: "00:00:40"
+    # A TV that's just woken lists no inputs for a few seconds, so try the HDMI 1 app a few times.
+    - repeat:
+        sequence:
+          - delay: 3
+          - action: webostv.command
+            data:
+              entity_id: media_player.lg_tv
+              command: system.launcher/launch
+              payload: {id: com.webos.app.hdmi1}
+            continue_on_error: true
+        until: "{{ repeat.index >= 3 or is_state_attr('media_player.lg_tv', 'source', 'HDMI 1') }}"
+
+night:
+  alias: Night
+  icon: mdi:weather-night
+  description: PS3 shut down, PS5 to rest, TV and light off, then a goodnight notification.
+  sequence:
+    - if: [{condition: state, entity_id: switch.ps3, state: "on"}]
+      then: [{action: switch.turn_off, target: {entity_id: switch.ps3}, continue_on_error: true}]
+    - if: [{condition: state, entity_id: switch.ps5, state: "on"}]
+      then: [{action: switch.turn_off, target: {entity_id: switch.ps5}, continue_on_error: true}]
+    - action: media_player.turn_off
+      target: {entity_id: media_player.lg_tv}
+      continue_on_error: true
+    - action: light.turn_off
+      target: {entity_id: light.ceiling_light}
+      continue_on_error: true
+    - action: notify.mobile_app_pixel_9_pro_xl
+      data:
+        title: Goodnight, Shane
+        message: >-
+          {% set p = state_attr('sensor.homelab_state', 'problems') or {} %}
+          Everything's off. {{ 'All quiet.' if not p else (p | count | string) ~ ' problem(s): ' ~ (p.values() | join('; ') | replace('`', '') | replace('**', '')) }}
+          The backup runs at 03:30.
+
+# The light's brightness, colour and white changes go through here (2026-11-12). Each change is sent straight away
+# (parallel); govee-bridge carries them out one by one in the order they arrive, so quick slider moves end on the last
+# value instead of being ignored ("Already running"). Not "restart": cancelling a request mid-way doesn't stop the
+# bridge, it only breaks its reply (BrokenPipeError in its log).
+ceiling_light_send:
+  alias: Ceiling light - send
+  icon: mdi:ceiling-light
+  mode: parallel
+  max: 20
+  fields:
+    cmds:
+      description: govee-bridge commands, e.g. [["on"], ["brightness", 60]]
+  sequence:
+    - action: rest_command.govee
+      data:
+        cmds: "{{ cmds }}"
+
+# Vice OSD card (2026-11-14, ~/tv-launcher/vice-layer-plan.md step 7): one call shows it everywhere. The event updates
+# sensor.vice_osd (the Vice panel on the tablet and phone shows it as a banner); rest_command.vice_osd sends it to the
+# TV (Vice Home, or the overlay over anything). Returns vice-tv's answer: {"shown": bool}, false when the TV is off.
+vice_osd:
+  alias: Vice OSD card
+  icon: mdi:message-badge-outline
+  mode: queued
+  fields:
+    title: {description: "First line", example: "Whisper has stopped", required: true}
+    line: {description: "Second line, grey part", example: "Homelab"}
+    em: {description: "Second line, white part", example: "Heads up"}
+    sub: {description: "Third line (grey)"}
+    icon: {description: "server, phone, bell or radio", example: bell}
+    dot: {description: "bad for a red dot", example: bad}
+    ttl: {description: "Seconds on screen", example: 8}
+    tag: {description: "Optional: script.vice_osd_clear with the same tag takes it off early", example: pixel_ring}
+  sequence:
+    - event: vice_osd
+      event_data:
+        title: "{{ title }}"
+        line: "{{ line | default('') }}"
+        em: "{{ em | default('') }}"
+        sub: "{{ sub | default('') }}"
+        icon: "{{ icon | default('bell') }}"
+        dot: "{{ dot | default('') }}"
+        ttl: "{{ ttl | default(8) }}"
+        tag: "{{ tag | default('') }}"
+    - action: rest_command.vice_osd
+      data:
+        title: "{{ title }}"
+        line: "{{ line | default('') }}"
+        em: "{{ em | default('') }}"
+        sub: "{{ sub | default('') }}"
+        icon: "{{ icon | default('bell') }}"
+        dot: "{{ dot | default('') }}"
+        ttl: "{{ ttl | default(8) }}"
+        tag: "{{ tag | default('') }}"
+      response_variable: tv
+      continue_on_error: true
+    - variables:
+        result: "{{ {'shown': (tv is defined and tv.status == 200 and tv.content.shown) | bool} }}"
+    - stop: done
+      response_variable: result
+
+# Takes Vice OSD cards with this tag off the TV and the Vice panel (e.g. the call was answered).
+vice_osd_clear:
+  alias: Vice OSD clear
+  icon: mdi:message-badge-outline
+  mode: queued
+  fields:
+    tag: {description: "The tag given to script.vice_osd", example: pixel_ring, required: true}
+  sequence:
+    - event: vice_osd_clear
+      event_data:
+        tag: "{{ tag }}"
+    - action: rest_command.vice_osd_clear
+      data:
+        tag: "{{ tag }}"
+      continue_on_error: true
+
+switch_on_tv:
+  alias: Switch on the TV
+  icon: mdi:nintendo-switch
+  description: TV on and over to the Nintendo Switch (HDMI 2). The Switch itself can't be woken over the network.
+  sequence:
+    - action: media_player.turn_on
+      target: {entity_id: media_player.lg_tv}
+    - wait_template: "{{ is_state('media_player.lg_tv', 'on') or is_state('media_player.lg_tv', 'playing') }}"
+      timeout: "00:00:40"
+    # Same retry as game_night: a TV that's just woken lists no inputs for a few seconds.
+    - repeat:
+        sequence:
+          - delay: 3
+          - action: webostv.command
+            data:
+              entity_id: media_player.lg_tv
+              command: system.launcher/launch
+              payload: {id: com.webos.app.hdmi2}
+            continue_on_error: true
+        until: "{{ repeat.index >= 3 or is_state_attr('media_player.lg_tv', 'source', 'Nintendo Switch') }}"

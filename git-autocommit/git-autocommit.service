@@ -1,0 +1,6 @@
+[Unit]
+Description=Commit leftover changes in homelab and tv-launcher git repos
+
+[Service]
+Type=oneshot
+ExecStart=%h/homelab/git-autocommit/git-autocommit.sh

@@ -1,0 +1,11 @@
+[Unit]
+Description=JARVIS Kokoro voice for Home Assistant Assist (Wyoming, 127.0.0.1:10200)
+
+[Service]
+ExecStart=%h/.local/share/jarvis-venv/bin/python %h/homelab/jarvis-assist/kokoro-wyoming.py
+Restart=on-failure
+RestartSec=5
+Nice=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# pre-commit hook for ~/homelab and ~/tv-launcher (symlinked from each repo's .git/hooks/pre-commit).
+# Blocks a commit whose staged changes contain a secret, found by gitleaks.
+# False positive: add the fingerprint gitleaks prints to .gitleaksignore in the repo root.
+if ! command -v gitleaks >/dev/null; then
+  echo "pre-commit: gitleaks isn't installed, so this commit can't be checked for secrets (sudo dnf install gitleaks)" >&2
+  exit 1
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner --log-level warn

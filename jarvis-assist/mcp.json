@@ -1,0 +1,2 @@
+{"mcpServers": {"ha": {"type": "http", "url": "http://127.0.0.1:8123/api/mcp",
+  "headers": {"Authorization": "Bearer ${JARVIS_HA_TOKEN}"}}}}

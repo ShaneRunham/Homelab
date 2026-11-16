@@ -1,0 +1,11 @@
+[Unit]
+Description=PC black box (vitals and journal warnings every 10 s, synced to disk)
+
+[Service]
+ExecStart=/usr/bin/python3 %h/homelab/blackbox/blackbox.py run
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=default.target

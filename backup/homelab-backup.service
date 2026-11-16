@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up important home folders to /mnt/storage
+After=docker.service
+RequiresMountsFor=/mnt/storage
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/homelab-backup

@@ -1,0 +1,9 @@
+[Unit]
+Description=Btrfs scrub on the first Sunday of each month, after the nightly jobs
+
+[Timer]
+OnCalendar=Sun *-*-01..07 05:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

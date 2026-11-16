@@ -1,0 +1,130 @@
+/* Jellyfin theme in the Vice Home / Vice panel style, without the Vice artwork or branding (2026-11-15).
+   Applied with the API (Dashboard > General > Custom CSS); source of truth is this file:
+   ~/homelab/jellyfin/apply-css.sh. Values copied from ~/tv-launcher/vice/vice.css. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+:root {
+  --vh-bg: #0d0a14;
+  --vh-panel: #1d1b23;
+  --vh-chip: rgba(38, 38, 44, .78);
+  --vh-dialog: #1e1c24;
+  --vh-white: #f2f2f2;
+  --vh-ink: #141414;
+  --vh-dim: rgba(255, 255, 255, .62);
+  --vh-line: rgba(255, 255, 255, .1);
+  --vh-r: 14px;
+  --vh-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* type and ground */
+html, body { font-family: Inter, "Noto Sans", sans-serif !important; -webkit-font-smoothing: antialiased; }
+html, .backgroundContainer, .dialog, .nowPlayingPlaylist, .nowPlayingContextMenu, .mainDrawer, .drawer-open,
+.noBackdropTransparency .detailPageSecondaryContainer { background-color: var(--vh-bg); }
+.backgroundContainer:not(.withBackdrop) {
+  background: linear-gradient(180deg, rgba(40, 30, 58, .35) 0%, rgba(13, 10, 20, 0) 45%), var(--vh-bg);
+}
+.backgroundContainer.withBackdrop { background-color: rgba(13, 10, 20, .86); }
+* { scrollbar-color: rgba(255, 255, 255, .18) transparent; }
+::-webkit-scrollbar-track-piece { background-color: transparent; }
+
+/* header: the round buttons and the tab pill from Vice Home's top bar */
+.skinHeader-withBackground { background-color: rgba(13, 10, 20, .92); }
+.skinHeader.semiTransparent { background: linear-gradient(180deg, rgba(13, 10, 20, .7), rgba(13, 10, 20, 0)); }
+.headerRight .headerButton {
+  background: var(--vh-chip); border-radius: 50%; width: 2.5em; height: 2.5em; margin-left: .45em; padding: 0;
+}
+.headerTabs .emby-tabs-slider {
+  background: var(--vh-chip); border-radius: 34px; padding: 5px; display: inline-flex; gap: 4px;
+}
+.emby-tab-button {
+  border-radius: 26px; padding: .55em 1.25em; color: rgba(255, 255, 255, .82); font-weight: 500;
+  transition: background .2s var(--vh-ease), color .2s var(--vh-ease);
+}
+.emby-tab-button:hover, .emby-tab-button.show-focus:focus { color: #fff; }
+.emby-tab-button.emby-tab-button-active, .emby-tab-button.emby-tab-button-active:hover {
+  background: var(--vh-white); color: var(--vh-ink);
+}
+.emby-tab-button.show-focus:focus { box-shadow: 0 0 0 3px #fff; }
+
+/* section labels, like Home's row labels */
+.sectionTitle { font-weight: 500; opacity: .92; letter-spacing: -.2px; }
+.sectionTitleContainer .sectionTitleTextButton .material-icons { opacity: .6; }
+
+/* cards: 14 px corners, soft shadow, the white focus ring with a gap */
+.cardScalable, .cardImageContainer, .cardContent, .cardOverlayContainer, .visualCardBox { border-radius: var(--vh-r); }
+.cardScalable { overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); transition: transform .15s var(--vh-ease); }
+.cardBox:not(.visualCardBox) .cardScalable { border: 0; }
+@media (hover: hover) { .card:hover .cardScalable { transform: scale(1.03); } }
+.card:focus .cardBox.visualCardBox, .card:focus .cardBox:not(.visualCardBox) .cardScalable { border-color: transparent !important; }
+.card:focus .cardScalable, .card:focus .visualCardBox {
+  outline: 4px solid #fff; outline-offset: 5px; transform: scale(1.05); box-shadow: 0 14px 40px rgba(0, 0, 0, .45);
+}
+.visualCardBox, .collapseContent, .paperList, .formDialogFooter:not(.formDialogFooter-clear),
+.formDialogHeader:not(.formDialogHeader-clear) { background-color: var(--vh-panel); }
+.cardText { font-weight: 500; }
+.cardText-secondary, .fieldDescription, .listItem .secondary, .nowPlayingBarSecondaryText, .secondary { color: var(--vh-dim); }
+.defaultCardBackground, .defaultCardBackground1, .defaultCardBackground2, .defaultCardBackground3,
+.defaultCardBackground4, .defaultCardBackground5 { background-color: var(--vh-panel) !important; }
+.cardImageIcon { color: rgba(255, 255, 255, .55); }
+.itemProgressBarForeground { background-color: var(--vh-white); }
+.itemProgressBar { background: rgba(255, 255, 255, .18); }
+.countIndicator, .fullSyncIndicator, .mediaSourceIndicator, .playedIndicator { background: var(--vh-white); color: var(--vh-ink); }
+
+/* buttons: white for the main action, dark chips for the rest */
+.button-submit, .emby-button.detailFloatingButton { background: var(--vh-white); color: var(--vh-ink); font-weight: 600; }
+.raised, .fab, .button-submit, .button-delete { border-radius: 26px; }
+.raised, .fab { background: var(--vh-chip); color: #fff; }
+.raised.button-submit, .button-submit { background: var(--vh-white); color: var(--vh-ink); }
+.emby-button.show-focus:focus, .alphaPickerButton-tv:focus, .emby-select-tv-withcolor:focus,
+.guide-channelHeaderCell:focus, .programCell:focus { background-color: var(--vh-white) !important; color: var(--vh-ink) !important; }
+.paper-icon-button-light:hover:not(:disabled), .paper-icon-button-light:active:not(:disabled) {
+  color: #fff; background-color: rgba(255, 255, 255, .1);
+}
+.paper-icon-button-light.show-focus:focus, .button-flat:hover, .buttonActive, .metadataSidebarIcon,
+.upNextDialog-countdownText, .guide-date-tab-button.emby-tab-button-active, .guide-date-tab-button:focus { color: #fff !important; }
+.button-link { color: #fff; text-decoration: none; text-underline-offset: 3px; }
+.button-link:hover { text-decoration: underline; }
+.progressring-spiner { border-color: var(--vh-white); }
+.selectionCommandsPanel { background: var(--vh-white); color: var(--vh-ink); }
+.itemSelectionPanel { border-color: var(--vh-white); }
+
+/* detail page: a small tracked caption over a tight title */
+.itemName.infoText, .detailPagePrimaryContainer .itemName { font-weight: 600; letter-spacing: -.02em; }
+.nameContainer .parentName { font-weight: 500; letter-spacing: .14em; opacity: .72; font-size: .95rem !important; margin-bottom: .2em; }
+.detailRibbon { background: rgba(13, 10, 20, .8); }
+.mediaInfoText { background: rgba(255, 255, 255, .1); border-radius: 9px; color: rgba(255, 255, 255, .9); }
+.mainDetailButtons { gap: .55em; }
+.mainDetailButtons .detailButton { background: var(--vh-chip); border-radius: 50%; }
+.mainDetailButtons .detailButton:hover { background: rgba(60, 58, 68, .9); }
+.mainDetailButtons .btnPlay.detailButton, .mainDetailButtons .btnPlay.detailButton:hover {
+  background: var(--vh-white); color: var(--vh-ink) !important;
+}
+.detailTableBodyRow-shaded:nth-child(even) { background: rgba(255, 255, 255, .04); }
+
+/* forms */
+.emby-input, .emby-textarea, .emby-select-withcolor {
+  background: rgba(255, 255, 255, .08); border: 2px solid transparent; border-radius: 12px;
+}
+.emby-input:focus, .emby-textarea:focus, .emby-select-withcolor:focus { border-color: rgba(255, 255, 255, .7) !important; }
+.inputLabelFocused, .selectLabelFocused, .textareaLabelFocused { color: #fff; }
+.emby-checkbox:checked + span + .checkboxOutline { background-color: var(--vh-white); border-color: var(--vh-white); }
+.emby-checkbox:focus:not(:checked) + span + .checkboxOutline { border-color: #fff; }
+.emby-checkbox:checked + span + .checkboxOutline .checkboxIcon-checked { color: var(--vh-ink) !important; }
+
+/* drawer */
+.navMenuOption { border-radius: 26px; margin: 2px 10px; }
+.navMenuOption-selected { background: var(--vh-white) !important; color: var(--vh-ink); }
+
+/* dialogs, menus, toasts: the OSD card's colour */
+.dialog:not(.dialog-fullscreen), .actionSheet, .toast { border-radius: var(--vh-r); }
+.dialog, .actionSheet { background-color: var(--vh-dialog); }
+.toast { background: rgba(30, 28, 36, .95); box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+.listItem:hover { background: rgba(255, 255, 255, .06); }
+.actionsheetDivider { background: var(--vh-line); }
+
+/* player */
+.mdl-slider-background-lower { background-color: var(--vh-white) !important; }
+.mdl-slider::-webkit-slider-thumb { background: var(--vh-white) !important; }
+.mdl-slider::-moz-range-thumb { background: var(--vh-white) !important; }
+.sliderBubble { background: var(--vh-dialog); border-radius: 9px; }
+.nowPlayingBar, .appfooter { background: rgba(20, 17, 28, .96); }

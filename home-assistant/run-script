@@ -1,0 +1,5 @@
+#!/bin/bash
+# Runs a Home Assistant script from the PC (used by KDE Connect's Game night / Night commands on the Pixel).
+# Usage: run-script game_night|night
+exec curl -s -o /dev/null -X POST -H "Authorization: Bearer $(cat "$HOME/homelab/home-assistant/token")" \
+  "http://127.0.0.1:8123/api/services/script/${1:?script name}"

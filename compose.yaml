@@ -1,0 +1,237 @@
+services:
+  forgejo:
+    # Self-hosted git web UI (added 2026-11-14): browse ~/homelab and ~/tv-launcher history from any device.
+    # Tailnet only, https://fedora.tailnet.ts.net:8448. Repos are pushed by each repo's post-commit hook.
+    image: codeberg.org/forgejo/forgejo:17-rootless   # major pinned; a v18 waits for a look
+    container_name: forgejo
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "127.0.0.1:3006:3000"
+    volumes:
+      - ./forgejo/data:/var/lib/gitea:Z
+      - ./forgejo/config:/etc/gitea:Z
+    environment:
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__server__ROOT_URL: https://fedora.tailnet.ts.net:8448/
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__server__OFFLINE_MODE: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+      FORGEJO__repository__ENABLE_PUSH_CREATE_USER: "true"
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__actions__ENABLED: "true"
+
+  forgejo-runner:
+    # Runs the checks in each repo's .forgejo/workflows on every push (added 2026-11-14).
+    # Has the Docker socket (root-equivalent): only shane's private repos can trigger it, registration is off.
+    image: code.forgejo.org/forgejo/runner:13   # major pinned
+    container_name: forgejo-runner
+    restart: unless-stopped
+    depends_on: [forgejo]
+    user: "1000:969"   # 969 = docker group, for the socket
+    command: forgejo-runner daemon --config /data/config.yml
+    working_dir: /data
+    volumes:
+      - ./forgejo-runner:/data:Z
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+
+  dozzle:
+    # Live log viewer for these containers. Read-only by default (no start/stop or shell);
+    # tailnet only, at https://fedora.tailnet.ts.net:8446
+    image: amir20/dozzle:v11   # major pinned (scan 2026-11-13): updates within v11, a v12 waits for a look
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3003:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  radio:
+    # Vice Radio: 80s station, own music + free internet stations, 6 s crossfades (radio/radio.liq).
+    # http://127.0.0.1:3004/vice-radio, tailnet https://fedora.tailnet.ts.net:8447/vice-radio
+    image: savonet/liquidsoap:v2.4.6
+    container_name: radio
+    restart: unless-stopped
+    command: ["/radio/radio.liq"]
+    ports:
+      - "127.0.0.1:3004:8000"   # stream
+      - "127.0.0.1:3005:8001"   # /now
+    volumes:
+      - ./radio:/radio:ro
+      - /mnt/storage/media/music:/music:ro
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2-rootless
+    container_name: uptime-kuma
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - ./uptime-kuma/data:/app/data:Z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  speedtest-tracker:
+    # No major-version tag exists, so this follows latest; check the release notes if a v2 appears.
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:80"
+    volumes:
+      - ./speedtest-tracker/config:/config:Z
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/London
+      APP_KEY: ${SPEEDTEST_APP_KEY}
+      APP_URL: https://fedora.tailnet.ts.net:8444
+      DB_CONNECTION: sqlite
+      DISPLAY_TIMEZONE: Europe/London
+      # A test every 6 hours, at quarter past, away from the 03:30-05:00 maintenance jobs.
+      SPEEDTEST_SCHEDULE: "15 */6 * * *"
+      PRUNE_RESULTS_OLDER_THAN: 365
+
+  # Home Assistant: host networking for Wake-on-LAN and LAN discovery. configuration.yaml binds it to
+  # 127.0.0.1:8123; the tailnet reaches it at https://fedora.tailnet.ts.net:8445 (tailscale serve).
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./home-assistant/config:/config:Z
+      - /etc/localtime:/etc/localtime:ro
+      # Read-only, only so System Monitor can show free space on the mirrored backup drives.
+      - /mnt/storage:/mnt/storage:ro
+    environment:
+      TZ: Europe/London
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    # Runs as Shane so the 0600 password file and data folders stay readable without sudo.
+    user: "1000:1000"
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:Z
+      - ./mosquitto/data:/mosquitto/data:Z
+      - ./mosquitto/log:/mosquitto/log:Z
+
+  # PS5 power and state over MQTT. Host networking is required (UDP discovery of the PS5).
+  # Web UI for registering the PS5: http://127.0.0.1:8645 (LAN blocked by the firewall).
+  # No version tags are published, so this follows latest.
+  ps5-mqtt:
+    image: ghcr.io/funkeyflo/ps5-mqtt:latest
+    container_name: ps5-mqtt
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./ps5-mqtt/config:/config:Z
+    environment:
+      MQTT_HOST: 127.0.0.1
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ha
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      DEVICE_CHECK_INTERVAL: 5000
+      DEVICE_DISCOVERY_INTERVAL: 60000
+      # Ask the PS5 directly: firewalld drops replies to broadcast searches, so default discovery finds nothing.
+      DEVICE_DISCOVERY_BROADCAST_ADDRESS: 192.168.0.15
+      ACCOUNT_CHECK_INTERVAL: 5000
+      ACCOUNT_IDLE_CHECK_INTERVAL: 60000
+      PSN_AUTH_STORE_DIR: /config
+      CREDENTIAL_STORAGE_PATH: /config/credentials.json
+      INCLUDE_PS4_DEVICES: "false"
+      FRONTEND_PORT: 8645
+      # PSN login for game/online status; the NPSSO lasts about 2 months (saved 2026-11-11).
+      PSN_ACCOUNTS: '[{"username": "MyPSNName", "npsso": "${PSN_NPSSO}"}]'
+    depends_on:
+      - mosquitto
+
+  # Media server for the PS3 USB drive's movies/shows. Bound to all interfaces (not just 127.0.0.1)
+  # so the TV/PS5/tablet apps can reach it on the LAN at 192.168.0.10:8096; needs a firewall rule
+  # (homelab/media/install-firewall.sh, sudo). GPU passthrough for VA-API H.264 transcoding on the R7 360.
+  jellyfin:
+    image: jellyfin/jellyfin:10.10.7   # pinned; re-check release notes before bumping
+    container_name: jellyfin
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "8096:8096"
+    volumes:
+      - ./jellyfin/config:/config:Z
+      - ./jellyfin/cache:/cache:Z
+      - /mnt/storage/media:/media:ro
+    # Must be a device, not a volume: a bind-mounted /dev/dri is blocked by the container's device rules (VA-API failed, 2026-11-15)
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - "105"   # render
+    environment:
+      TZ: Europe/London
+
+  # Artwork/metadata editor for the movie and TV library (posters, fanart, logos, NFO data) when
+  # Jellyfin's own auto-matching gets something wrong. Writes .nfo + image files straight into the
+  # library folders, which Jellyfin then reads directly. Web UI is noVNC (a full desktop, not a plain
+  # page) so it's heavier than the other containers. Admin only: 127.0.0.1, tailnet https://fedora.tailnet.ts.net:8453
+  tinymediamanager:
+    image: tinymediamanager/tinymediamanager:5.3.5   # pinned; re-check release notes before bumping
+    container_name: tinymediamanager
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3011:4000"
+    volumes:
+      - ./tinymediamanager/data:/data:Z
+      - /mnt/storage/media/movies:/media/movies:Z
+      - /mnt/storage/media/tv:/media/tv_shows:Z
+    environment:
+      USER_ID: 1000
+      GROUP_ID: 1000
+      ALLOW_DIRECT_VNC: "false"
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+      PASSWORD: ${TMM_PASSWORD}
+
+  # Speech-to-text for Home Assistant Assist (JARVIS on the phone and tablet), fully offline.
+  # HA reaches it at 127.0.0.1:10300 (Wyoming). The reply voice is the jarvis-assist-tts user service.
+  whisper:
+    image: rhasspy/wyoming-whisper:latest   # only exact versions are published (3.8.1 on 2026-11-13); low risk, so it follows latest
+    container_name: whisper
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:10300:10300"
+    volumes:
+      - ./whisper/data:/data:Z
+    command: --model base-int8 --language en --beam-size 1
+
+  # Nintendo Switch Online friends' status for the Discord bot's Switch cards (2026-11-16). nxapi (by Samuel
+  # Thomas) logged in to the bot's own Nintendo account; its f-token service (nxapi-znca-api.fancy.org.uk) gets
+  # Nintendo's app token. The bot reads http://127.0.0.1:5404/api/znc/friends?user=<account id> every minute.
+  # One-time login (interactive, in a terminal): see ~/homelab/README.md › Switch presence.
+  nxapi:
+    # Built from nxapi's source (git clone https://github.com/samuelthomas2774/nxapi ~/.local/share/nxapi-src;
+    # 47c9d35 "Coral 3.5.0", 2026-09-09): the npm release and the registry image are too old for Nintendo's app.
+    # Source builds need their own nxapi-auth client (nxapi-auth.fancy.org.uk/oauth/clients, "VICE Bot" on Shane's
+    # account): a public client, so the id and scope are enough (no secret).
+    build: ${HOME}/.local/share/nxapi-src
+    image: nxapi:local
+    container_name: nxapi
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5404:80"
+    volumes:
+      - ./nxapi/data:/data:Z
+    environment:
+      NXAPI_USER_AGENT: homelab-presence/1.0
+      NXAPI_ZNCA_API_CLIENT_ID: YOUR_NXAPI_CLIENT_ID
+      NXAPI_ZNCA_API_AUTH_SCOPE: ca:gf ca:er ca:dr
+    command: nso http-server --listen [::]:80 --no-require-token --update-interval 60

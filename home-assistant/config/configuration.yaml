@@ -322,5 +322,12 @@ panel_custom:
     url_path: vice
     sidebar_title: Vice
     sidebar_icon: mdi:palm-tree
-    module_url: /local/vice-panel/vice-panel.js?v=57
+    module_url: /local/vice-panel/vice-panel.js?v=58
+    require_admin: false
+  # Vice Map (2026-11-16): the homelab as an invented city; the Vice panel's map button opens it
+  - name: vice-map
+    url_path: vice-map
+    sidebar_title: Vice Map
+    sidebar_icon: mdi:map-marker-radius
+    module_url: /local/vice-panel/vice-map.js?v=5
     require_admin: false

@@ -62,6 +62,7 @@ const LOGO = {
 const ICON = {
   radio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>',
   skip: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 5.5v13l9.5-6.5z"/><path d="M18.5 5v14" fill="none" stroke-linecap="round" stroke-width="2.2"/></svg>',
+  map: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.1 5.6a2 2 0 0 0 1.8 0l3.7-1.9A1 1 0 0 1 21 4.6v12.8a1 1 0 0 1-.6.9l-4.5 2.3a2 2 0 0 1-1.8 0l-4.2-2.1a2 2 0 0 0-1.8 0l-3.7 1.9A1 1 0 0 1 3 19.4V6.6a1 1 0 0 1 .6-.9l4.5-2.3a2 2 0 0 1 1.8 0zM15 5.8v15M9 3.2v15"/></svg>',
   menu: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   // lucide "mic" (ISC)
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>',
@@ -338,6 +339,7 @@ const HTML = `
     <div class="clock" id="clock"></div>
     <div class="right">
       <div class="home"><span class="dot" id="homeDot"></span><span id="home"></span></div>
+      <div class="round" id="mapBtn" title="Vice Map">${ICON.map}</div>
       <div class="round" id="jarvis" title="Talk to JARVIS">${ICON.mic}</div>
       <div class="round" id="menu" title="Menu">${ICON.menu}</div>
     </div>
@@ -653,6 +655,10 @@ class VicePanel extends HTMLElement {
     this.$("wxSheet").onclick = (e) => { if (e.target === this.$("wxSheet")) this.$("wxSheet").classList.remove("show"); };
     this.$("menu").onclick = () => this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true }));
     this.$("jarvis").onclick = () => this.openJarvis();
+    this.$("mapBtn").onclick = () => {  // Vice Map (vice-map.js), HA's own navigation
+      history.pushState(null, "", "/vice-map");
+      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+    };
     this.$("nSheet").onclick = (e) => { if (e.target === this.$("nSheet")) this.$("nSheet").classList.remove("show"); };
     this.$("viewer").onclick = (e) => {
       const v = this.view;

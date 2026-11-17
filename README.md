@@ -18,7 +18,7 @@ watches itself, backs itself up every night and tells me on my phone, TV or Disc
 | **JARVIS voice** | Offline speech-to-text (Whisper) and voice (Kokoro); Claude answers what Home Assistant can't (`jarvis-assist`) |
 | **Jellyfin** | Films and TV with hardware transcoding on the GPU, plus tinyMediaManager for tidying new media |
 | **Forgejo + runner** | My own Git server; every push runs the checks in `.forgejo/workflows` (tests, compose, shellcheck, HA config) |
-| **Uptime Kuma, Dozzle, Speedtest Tracker** | Uptime monitors, container logs, hourly internet speed tests |
+| **Uptime Kuma, Dozzle, Speedtest Tracker** | Uptime monitors, container logs, an internet speed test every 6 hours |
 | **Mosquitto + ps5-mqtt** | MQTT, and PS5 power and game status over the local network |
 | **Vice Radio** | A 24/7 80s station: [VICE-Radio](https://github.com/ShaneRunham/VICE-Radio) |
 | **VICE Bot** | The Discord bot that reports on all of this: [VICE-Bot](https://github.com/ShaneRunham/VICE-Bot) |
@@ -34,7 +34,7 @@ open on the LAN.
 A custom Home Assistant panel (`home-assistant/config/www/vice-panel/vice-panel.js`) in the same look as the TV's
 home screen. It's the only dashboard: the tablet opens it when it's plugged in, and it's in the phone app's menu.
 
-<img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/panel-phone.jpg" alt="The Vice panel on a phone" width="32%"> <img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/panel-phone-2.jpg" alt="Lower down on the phone: the light, the PC and GTA VI news" width="32%"> <img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-card.jpg" alt="A Vice Map card on the phone" width="32%">
+<img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/panel-phone.jpg" alt="The Vice panel on a phone" width="32%"> <img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/panel-phone-2.jpg" alt="Lower down on the phone: the light, the PC and GTA VI news" width="32%">
 
 - **Top line:** weather (tap for the next hours), a GTA VI countdown, and the homelab's health with the Wanted stars
 - **Devices:** TV (tap for power, hold to pick an input), PS5 (wake or rest, the game being played), Switch (puts it on the TV), Vice Radio (play it on the panel, skip)
@@ -49,10 +49,12 @@ home screen. It's the only dashboard: the tablet opens it when it's plugged in, 
 
 A second panel (`www/vice-panel/vice-map.js`): the homelab drawn as an invented coastal city, made from scratch in
 SVG. Each device is a place on it: the PC is Fedora Tower, the TV the Starlight Drive-In, the PS5 the Neon Arcade,
-the Switch the Pier Arcade, the radio Radio Hill, the backups The Vault and the ceiling light the Lighthouse (its
+the Switch the Pier Arcade, Vice Radio is Radio Hill, the backups The Vault and the ceiling light the Lighthouse (its
 beam sweeps the sea while the light is on).
 
-<img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-tablet.jpg" alt="Vice Map on a tablet" width="72%"> <img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-phone.jpg" alt="Vice Map on a phone" width="25%">
+<img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-tablet.jpg" alt="Vice Map on a tablet" width="100%">
+
+<img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-phone.jpg" alt="Vice Map on a phone" width="32%"> <img src="https://raw.githubusercontent.com/ShaneRunham/ShaneRunham/main/screens/homelab/vice-map-card.jpg" alt="Tapping a place on the phone opens its card" width="32%">
 
 Places that are on glow; tap one for its card with live details and controls. A problem flashes red on the place it
 belongs to, and at three stars or more the map gets a red and blue border. Tablet: map and list side by side;
@@ -62,7 +64,7 @@ phone: map on top, cards slide up from the bottom.
 
 The homelab's health as 0 to 5 stars, shown everywhere: the Vice panel, Vice Map, the TV, the phone remote and Discord.
 
-- Each problem the bot finds is worth 1 to 3 stars (disk, SATA link, backup or watchdog trouble 3; a stopped container or service 2; the rest 1)
+- Each problem the bot finds is worth 1 to 3 stars (disk, SATA link, backup, watchdog or Docker trouble 3; a stopped container or service 2; the rest 1)
 - A problem left unfixed gains a star per hour (at most two more), and three problems at once add one
 - When everything's fixed the stars flash for about two minutes ("evading"), then it's "Lost them"
 - Phone alerts are titled with the stars; TV pop-ups show them; Home Assistant has `sensor.wanted_level`
@@ -97,12 +99,13 @@ is the quiet log.
 |---|---|
 | `compose.yaml` | Every container |
 | `home-assistant/config` | Automations, scripts, the Vice panel and Vice Map |
-| `jarvis-assist`, `whisper` | The voice assistant |
+| `jarvis-assist` | The voice assistant (Whisper and Kokoro run beside it in `compose.yaml`) |
 | `backup`, `scrub`, `hardening`, `update`, `update-snapshot`, `kernel` | Keeping the PC healthy |
 | `doctor`, `blackbox`, `heartbeat` | Health checks |
 | `git-autocommit`, `tools` | Automatic commits and the public mirrors |
 | `govee-bridge`, `pc-actions`, `streaming`, `ps3-backup`, `jellyfin` | Small services and setups |
-| `forgejo`, `.forgejo/workflows` | The Git server and its checks |
+| `mosquitto`, `media` | The MQTT broker's config; the firewall rule for Jellyfin on the LAN |
+| `.forgejo/workflows` | The checks every push runs on my Git server |
 
 > A cleaned copy of my private repo, updated automatically: personal details are swapped for placeholders and
 > third-party artwork, fonts and videos are left out. It's built for my PC, so expect to adapt paths and names.

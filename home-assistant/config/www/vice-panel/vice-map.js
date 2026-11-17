@@ -56,7 +56,7 @@ const TREES = (() => {  // trees scattered inside each park, a little uneven (fi
   const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   const park = (x, y, w, h, n) => { for (let i = 0; i < n; i++) {
     out += `<circle cx="${(x + 12 + rnd() * (w - 24)).toFixed(1)}" cy="${(y + 12 + rnd() * (h - 24)).toFixed(1)}" r="${(3.5 + rnd() * 3).toFixed(1)}"/>`; } };
-  park(112, 104, 170, 146, 16); park(92, 544, 160, 118, 13); park(424, 640, 108, 86, 8); park(704, 190, 40, 110, 4);
+  park(112, 104, 170, 146, 16); park(92, 544, 160, 118, 13); park(424, 640, 108, 86, 8);
   park(268, 868, 64, 64, 6);
   return out;
 })();
@@ -93,7 +93,7 @@ const MAP_SVG = `
   <g class="parks" clip-path="url(#land)">
     <g fill="#213634" stroke="rgba(126,226,168,.22)" stroke-width="1.5">
       <rect x="112" y="104" width="170" height="146" rx="40"/><rect x="92" y="544" width="160" height="118" rx="18"/>
-      <rect x="424" y="640" width="108" height="86" rx="14"/><rect x="704" y="190" width="40" height="110" rx="14"/>
+      <rect x="424" y="640" width="108" height="86" rx="14"/>
       <circle cx="300" cy="900" r="46"/>
     </g>
     <g fill="rgba(126,226,168,.32)">${TREES}</g>
@@ -107,6 +107,8 @@ const MAP_SVG = `
     <path d="M720 60C734 300 744 560 748 760C750 860 730 920 700 950" clip-path="url(#land)"/>
   </g>
   <g stroke="rgba(255,255,255,.11)" stroke-width="3" fill="none"><path d="M780 604H900"/><rect x="888" y="590" width="26" height="28" rx="3" fill="rgba(255,255,255,.08)"/></g>
+  <defs><linearGradient id="beam" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff6d8" stop-opacity=".34"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></linearGradient></defs>
+  <path class="beam" d="M716 902L1000 800V1000Z" fill="url(#beam)"/>
   <g class="lbl" fill="rgba(255,255,255,.34)" font-size="17" letter-spacing="5" font-weight="600">
     <text x="236" y="84">NORTH SHORE</text><text x="40" y="496">DOWNTOWN</text><text x="40" y="742">LITTLE PALMS</text>
     <text x="250" y="972">HARBOR</text><text x="668" y="494" fill="rgba(180,215,255,.3)" font-size="14" transform="rotate(-90 668 494)">THE BAY</text>
@@ -139,6 +141,9 @@ svg{display:block}
 /* explicit size: HA's panel host has no fixed height for a percentage to work from (2026-11-16, map was 0 px) */
 .mapbox{position:relative;flex:none;width:min(calc(100vh - 150px),58vw);aspect-ratio:1;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4)}
 .mapbox .map{position:absolute;inset:0;width:100%;height:100%}
+.mapbox .beam{opacity:0;transition:opacity .6s}
+.mapbox.lit .beam{opacity:1;animation:sweep 6s ease-in-out infinite;transform-origin:716px 902px}
+@keyframes sweep{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
 .mapbox.hot{animation:siren 2.4s ease-in-out infinite}
 @keyframes siren{0%,100%{box-shadow:0 12px 40px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,90,90,.0)}25%{box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 3px rgba(255,90,90,.55)}75%{box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 3px rgba(90,140,255,.55)}}
 .blip{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:1}
@@ -194,7 +199,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
   padding:12px 20px;border-radius:14px;font-size:15px;pointer-events:none;z-index:6;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 /* phone: the map full width on top, the places under it; names on the map only for the selected place */
-:host(.phone) .wrap{padding:20px 16px 24px;gap:16px}
+:host(.phone) .wrap{padding:20px 16px calc(32px + env(safe-area-inset-bottom));gap:16px}
 :host(.phone) .title b{font-size:22px}
 :host(.phone) .chip{padding:8px 12px;font-size:14px}
 :host(.phone) .chip .w{display:none}
@@ -202,7 +207,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 :host(.phone) .mapbox{width:100%}
 :host(.phone) .blip .b{width:38px;height:38px}
 :host(.phone) .blip .b svg{width:19px;height:19px}
-:host(.phone) .blip .n,:host(.phone) .blip .s{display:none}
+:host(.phone) .blip .s{display:none}
+:host(.phone) .blip .n{margin-top:4px;font-size:11px;font-weight:500;opacity:.9}
+:host(.phone) .blip.bad .b::after{inset:-5px;animation-name:pingS}
+@keyframes pingS{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.3);opacity:0}}
 :host(.phone) .lbl{display:none}
 :host(.phone) .side{max-height:none;overflow:visible}
 :host(.phone) .blocks{opacity:.55}
@@ -341,8 +349,9 @@ class ViceMap extends HTMLElement {
   render() {
     if (!this._hass) return;
     const n = parseInt(this.st(E.wanted)) || 0, ev = this.at(E.wanted, "evading") || 0;
-    this.$("chip").innerHTML = n || ev ? `${stars(n, ev)}<span class="w">${n ? "Wanted" : "Evading"}</span>` : '<span class="dot"></span>All quiet';
+    this.$("chip").innerHTML = n || ev ? `${stars(n, ev)}<span class="w">${n ? "Wanted" : "Evading"}${n ? ` · ${(this.at(E.wanted, "crimes") || []).length} ${(this.at(E.wanted, "crimes") || []).length === 1 ? "problem" : "problems"}` : ""}</span>` : '<span class="dot"></span>All quiet';
     this.$("mapbox").classList.toggle("hot", n >= 3);
+    this.$("mapbox").classList.toggle("lit", this.st(E.light) === "on");  // the Lighthouse beam
     for (const p of PLACES) {
       const i = this.info(p.id), bad = this.crimes(p.id).length > 0;
       const line = bad ? esc(this.crimes(p.id)[0].what) : i.line;

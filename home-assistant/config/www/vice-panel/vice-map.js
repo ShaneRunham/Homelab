@@ -50,6 +50,16 @@ function placeOf(key) {
 // ---------- the map: an invented coastal city (mainland, a bay with islets, a barrier island with its beach, ocean) ----------
 const MAINLAND = "M0 0H602C588 92 612 152 592 232C577 302 603 362 588 432C572 522 612 592 592 672C577 742 542 802 562 872C577 932 542 972 522 1000H0Z";
 const ISLAND = "M690 38C722 28 746 62 752 122L766 402C776 522 792 642 782 762C774 862 746 932 706 962C690 968 682 950 688 930C705 860 712 780 708 680C702 560 690 440 688 320C686 200 676 80 690 38Z";
+// trees in the parks (fixed spots, so it looks the same every time)
+const TREES = (() => {  // trees scattered inside each park, a little uneven (fixed pseudo-random: same every time)
+  let seed = 3, out = "";
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const park = (x, y, w, h, n) => { for (let i = 0; i < n; i++) {
+    out += `<circle cx="${(x + 12 + rnd() * (w - 24)).toFixed(1)}" cy="${(y + 12 + rnd() * (h - 24)).toFixed(1)}" r="${(3.5 + rnd() * 3).toFixed(1)}"/>`; } };
+  park(112, 104, 170, 146, 16); park(92, 544, 160, 118, 13); park(424, 640, 108, 86, 8); park(704, 190, 40, 110, 4);
+  park(268, 868, 64, 64, 6);
+  return out;
+})();
 // city blocks: a few lit buildings in the street grid (the same every time: a fixed pseudo-random sequence)
 const BLOCKS = (() => {
   let seed = 7, out = "";
@@ -77,26 +87,30 @@ const MAP_SVG = `
   <path d="${MAINLAND}" fill="#2a2140"/>
   <path d="${ISLAND}" fill="#2a2140"/>
   <g fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2"><path d="${MAINLAND}"/><path d="${ISLAND}"/></g>
-  <g clip-path="url(#land)">${BLOCKS}</g>
-  <path d="M752 122L766 402C776 522 792 642 782 762C774 862 746 932 706 962" fill="none" stroke="rgba(255,196,150,.22)" stroke-width="12"/>
+  <g class="blocks" clip-path="url(#land)">${BLOCKS}</g>
+  <path d="M752 122L766 402C776 522 792 642 782 762C774 862 746 932 706 962" fill="none" stroke="rgba(255,206,150,.42)" stroke-width="11"/>
   <rect width="1000" height="1000" fill="url(#grid)" clip-path="url(#land)"/>
-  <g fill="rgba(126,226,168,.09)" clip-path="url(#land)">
-    <rect x="112" y="104" width="170" height="146" rx="40"/><rect x="92" y="544" width="160" height="118" rx="18"/>
-    <rect x="424" y="640" width="108" height="86" rx="14"/><rect x="704" y="190" width="40" height="110" rx="14"/>
-    <circle cx="300" cy="900" r="46"/>
+  <g class="parks" clip-path="url(#land)">
+    <g fill="#213634" stroke="rgba(126,226,168,.22)" stroke-width="1.5">
+      <rect x="112" y="104" width="170" height="146" rx="40"/><rect x="92" y="544" width="160" height="118" rx="18"/>
+      <rect x="424" y="640" width="108" height="86" rx="14"/><rect x="704" y="190" width="40" height="110" rx="14"/>
+      <circle cx="300" cy="900" r="46"/>
+    </g>
+    <g fill="rgba(126,226,168,.32)">${TREES}</g>
   </g>
   <g fill="#2a2140" stroke="rgba(255,255,255,.22)" stroke-width="2"><ellipse cx="640" cy="330" rx="16" ry="30"/>
   <ellipse cx="636" cy="610" rx="22" ry="13"/><ellipse cx="646" cy="822" rx="13" ry="22"/></g>
   <g stroke="rgba(255,255,255,.16)" stroke-width="5" fill="none" stroke-linecap="round">
     <path d="M0 232H700M0 522H700M0 800H712M182 0V1000M404 0V872M0 940L240 700" clip-path="url(#land)"/>
-    <path d="M588 232H702M596 522H700M556 800H712" stroke="rgba(255,255,255,.3)" stroke-width="7"/>
+    <path d="M586 232H704M594 522H702M554 800H714" stroke="#0b1430" stroke-width="13"/>
+    <path d="M586 232H704M594 522H702M554 800H714" stroke="rgba(255,255,255,.34)" stroke-width="7"/>
     <path d="M720 60C734 300 744 560 748 760C750 860 730 920 700 950" clip-path="url(#land)"/>
   </g>
   <g stroke="rgba(255,255,255,.11)" stroke-width="3" fill="none"><path d="M780 604H900"/><rect x="888" y="590" width="26" height="28" rx="3" fill="rgba(255,255,255,.08)"/></g>
   <g class="lbl" fill="rgba(255,255,255,.34)" font-size="17" letter-spacing="5" font-weight="600">
     <text x="236" y="84">NORTH SHORE</text><text x="40" y="496">DOWNTOWN</text><text x="40" y="742">LITTLE PALMS</text>
-    <text x="250" y="972">HARBOR</text><text x="548" y="470" fill="rgba(255,255,255,.22)" transform="rotate(-90 548 470)">THE BAY</text>
-    <text x="732" y="560" transform="rotate(-86 732 560)">VICE BEACH</text><text x="842" y="380" fill="rgba(255,255,255,.18)" letter-spacing="10">OCEAN</text>
+    <text x="250" y="972">HARBOR</text><text x="668" y="494" fill="rgba(180,215,255,.3)" font-size="14" transform="rotate(-90 668 494)">THE BAY</text>
+    <text x="806" y="300" fill="rgba(255,214,170,.42)" font-size="15" transform="rotate(87 806 300)">VICE BEACH</text><text x="842" y="380" fill="rgba(255,255,255,.18)" letter-spacing="10">OCEAN</text>
   </g>
 </svg>`;
 
@@ -131,16 +145,17 @@ svg{display:block}
 .blip .b{position:relative;width:46px;height:46px;border-radius:23px;display:grid;place-items:center;background:rgba(30,28,36,.94);
   box-shadow:0 0 0 2px rgba(255,255,255,.28),0 6px 16px rgba(0,0,0,.45);color:rgba(255,255,255,.55);transition:.2s}
 .blip .b svg{width:22px;height:22px}
-.blip.on .b{color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px rgba(255,255,255,.35),0 6px 16px rgba(0,0,0,.45)}
+.blip.on .b{color:#fff;box-shadow:0 0 0 2px #fff,0 0 14px rgba(255,255,255,.22),0 6px 16px rgba(0,0,0,.45)}
 .blip.bad .b::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid #ff6b6b;animation:ping 1.4s ease-out infinite}
 .blip.bad .b{box-shadow:0 0 0 2px #ff8a7a,0 6px 16px rgba(0,0,0,.45);color:#fff}
 @keyframes ping{0%{transform:scale(.85);opacity:1}100%{transform:scale(1.5);opacity:0}}
 .blip.sel .b{background:#f2f2f2;color:#141414;box-shadow:0 0 0 3px #fff,0 6px 16px rgba(0,0,0,.45)}
 .blip .n{margin-top:7px;font-size:14px;font-weight:500;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.8),0 0 12px rgba(0,0,0,.6)}
 .blip .s{font-size:12px;opacity:.65;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.8)}
-.side{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.side{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;max-height:min(calc(100vh - 150px),58vw);overflow-y:auto}
 .label{font-size:17px;font-weight:500;opacity:.92;margin:2px 0 4px}
-.place{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:rgba(32,32,38,.82);cursor:pointer}
+#list{display:flex;flex-direction:column;gap:10px}
+.place{display:flex;align-items:center;gap:14px;padding:10px 16px;border-radius:14px;background:rgba(32,32,38,.82);cursor:pointer}
 .place .i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);flex:none}
 .place .i svg{width:20px;height:20px}
 .place.on .i{color:#fff;background:rgba(255,255,255,.16)}
@@ -152,7 +167,7 @@ svg{display:block}
 .place.bad p{color:#ffb2a8}
 .sheet{position:fixed;inset:0;z-index:5;background:rgba(8,5,14,.55);display:none;align-items:center;justify-content:center}
 .sheet.show{display:flex}
-.pick{width:min(520px,92%);max-height:90%;overflow-y:auto;background:rgba(30,28,36,.97);border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.pick{width:min(520px,92%);max-height:90%;overflow-y:auto;background:#1e1c24;border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .ph{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .ph .i{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.12);flex:none}
 .ph .i svg{width:24px;height:24px}
@@ -189,6 +204,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 :host(.phone) .blip .b svg{width:19px;height:19px}
 :host(.phone) .blip .n,:host(.phone) .blip .s{display:none}
 :host(.phone) .lbl{display:none}
+:host(.phone) .side{max-height:none;overflow:visible}
+:host(.phone) .blocks{opacity:.55}
+:host(.phone) .sheet{align-items:flex-end}
+:host(.phone) .pick{width:100%;max-height:82%;border-radius:22px 22px 0 0;padding:28px 20px calc(24px + env(safe-area-inset-bottom));position:relative}
+:host(.phone) .pick::before{content:"";position:absolute;top:10px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:rgba(255,255,255,.22)}
 `;
 
 const HTML = `

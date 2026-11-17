@@ -329,5 +329,5 @@ panel_custom:
     url_path: vice-map
     sidebar_title: Vice Map
     sidebar_icon: mdi:map-marker-radius
-    module_url: /local/vice-panel/vice-map.js?v=5
+    module_url: /local/vice-panel/vice-map.js?v=9
     require_admin: false

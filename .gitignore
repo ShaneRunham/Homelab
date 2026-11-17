@@ -56,6 +56,7 @@ home-assistant/config/www/vice-panel/radio/
 home-assistant/panel/checks/
 radio/loudness.json
 radio/library.m3u
+radio/favourites.m3u
 radio/scan-first.log
 radio/downsample.log
 forgejo/data/

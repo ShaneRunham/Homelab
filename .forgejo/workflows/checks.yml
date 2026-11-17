@@ -44,7 +44,7 @@ jobs:
       - run: eval "$FETCH"
       - run: |
           f=$(find . -type f -not -path "*/node_modules/*" -not -path "*/www/*" | while read -r x; do
-                head -n1 "$x" 2>/dev/null | grep -qE '^#!.*/(env )?(ba)?sh' && echo "$x"; done)
+                if head -n1 "$x" 2>/dev/null | grep -qE '^#!.*/(env )?(ba)?sh'; then echo "$x"; fi; done)
           shellcheck -S warning -f gcc $f || true
           shellcheck -S error $f
 

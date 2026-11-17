@@ -15,7 +15,8 @@ trap 'push down "Update failed at line $LINENO"' ERR
 cd /home/shanerunham/homelab
 # Registries have brief outages (lscr.io timeout 2026-11-07, ghcr.io 401 2026-11-10): retry before failing.
 for try in 1 2 3 4; do
-  docker compose pull --quiet && break
+  # --ignore-buildable: nxapi is built locally (nxapi:local), there's nothing to pull for it (failed 2026-11-17)
+  docker compose pull --quiet --ignore-buildable && break
   [ "$try" -eq 4 ] && { echo "Image pull failed 4 times"; false; }
   echo "Pull failed (try $try), retrying in $((try * 60))s"
   sleep $((try * 60))

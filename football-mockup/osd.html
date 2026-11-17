@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Vice Football mock-up: TV OSD cards with Vice Home's own card CSS (vice/vice.css .card/.ic/.osd), over a real
+     Vice Home screenshot. #goal = the one card in place; #sheet = every event card, real size. 1920x1080. -->
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Inter;src:url(inter-latin.woff2) format("woff2");font-weight:100 900}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0d0a14 url(home-real.png) 0 0/1920px 1080px;color:#fff;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box;margin:0;padding:0}
+.card{width:566px;height:104px;border-radius:14px;background:rgba(30,28,36,.95);box-shadow:0 24px 60px rgba(0,0,0,.5);display:flex;align-items:center;gap:18px;padding:0 20px}
+.ic{width:100px;height:56px;border-radius:12px;background:rgba(255,255,255,.1);display:grid;place-items:center;flex:none;position:relative;overflow:hidden}
+.card h4{font-size:25px;font-weight:450;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card p{font-size:17px;color:rgba(255,255,255,.62);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:22px;min-height:44px}
+.card p em{font-style:normal;color:#fff;opacity:.9}
+.card p .last{opacity:.75}
+.card > div:last-child{min-width:0}
+.osd{position:absolute;right:84px;top:140px}
+/* new for football: crest(s) contained, not cropped; a goal for us gets a pink edge that flashes twice */
+.ic.crest{gap:4px;grid-auto-flow:column}
+.ic.crest img{height:40px;width:40px;object-fit:contain}
+.ic.crest.two img{height:34px;width:34px}
+.card.ours{box-shadow:0 24px 60px rgba(0,0,0,.5),inset 0 0 0 2px #ff5c8a}
+.card h4 .min{opacity:.55;font-weight:400;margin-left:8px}
+.red{display:inline-block;width:12px;height:16px;border-radius:2px;background:#ff5a5a;margin-right:8px;vertical-align:-2px}
+#sheet{display:none;position:absolute;inset:0;background:rgba(10,6,20,.82);padding:60px 84px;grid-template-columns:repeat(2,566px);gap:28px 60px;align-content:start}
+#sheet .t{font-size:15px;color:rgba(255,255,255,.55);margin-bottom:10px}
+.sheet #sheet{display:grid}.sheet .osd{display:none}
+</style></head>
+<body>
+<div class="osd" id="one"></div>
+<div id="sheet"></div>
+<script>
+const C = id => `crests/${id}.png`;
+const ic = (...ids) => `<div class="ic crest${ids.length > 1 ? " two" : ""}">${ids.map(i => `<img src="${C(i)}">`).join("")}</div>`;
+const card = (cls, icon, title, line, sub) => `<div class="card ${cls}">${icon}<div><h4>${title}</h4><p>${line}${sub ? `<br><span class="last">${sub}</span>` : ""}</p></div></div>`;
+const K = [
+  ["30 min before", card("", ic(366, 361), "London v Newcastle", "Premier League · <em>15:00 kickoff</em>", "Stadium of Light")],
+  ["Kickoff", card("", ic(366, 361), "Kicked off", "London v Newcastle · <em>0–0</em>")],
+  ["Our goal (pink edge flashes twice)", card("ours", ic(366), "GOAL! London<span class=min>67'</span>", "Isidor · <em>London 2–1 Newcastle</em>")],
+  ["Their goal", card("", ic(361), "Newcastle score<span class=min>71'</span>", "Isak · <em>London 2–2 Newcastle</em>")],
+  ["Penalty missed / saved", card("", ic(448), "Penalty missed<span class=min>54'</span>", "Kane (England) · <em>England 0–0 Ukraine</em>")],
+  ["Goal ruled out (score went back down)", card("", ic(366), "Goal ruled out", "London · <em>back to 1–1</em>")],
+  ["Red card", card("", ic(361), "Red card<span class=min>80'</span>", "<span class=red></span>Burn (Newcastle) · <em>2–2</em>")],
+  ["Half time", card("", ic(366, 361), "Half time", "London <em>1–1</em> Newcastle")],
+  ["Full time", card("", ic(366, 361), "Full time · Won", "London <em>3–2</em> Newcastle", "Isidor 64', 88' · Brobbey 12'")],
+  ["Full time (England, lost)", card("", ic(448, 457), "Full time · Lost", "England <em>0–1</em> Ukraine", "Friendly")],
+];
+document.getElementById("one").innerHTML = K[2][1];
+document.getElementById("sheet").innerHTML = K.map(([t, c]) => `<div><div class="t">${t}</div>${c}</div>`).join("");
+if (location.hash === "#sheet") document.body.classList.add("sheet");
+</script>
+</body></html>

@@ -1,10 +1,10 @@
-// Vice Map (2026-11-16): the homelab as an invented Vice-style city. Each device is a place on the map; tap it for its
+// Hideout Map (was Vice Map, 2026-11-16; renamed, graphite 2026-11-25): the homelab as an invented city. Each device is a place on the map; tap it for its
 // controls. Places that are on glow; a Wanted Level problem (~/homelab/discord-bot/wanted.py) flashes red on the place
-// it belongs to. A custom panel (panel_custom url_path vice-map) like the Vice panel, same look; the Vice panel's map
+// it belongs to. A custom panel (panel_custom url_path vice-map) like the Hideout panel, same look; the panel's map
 // button opens it. The map is drawn here (inline SVG), not taken from any game.
 
 const BASE = "/local/vice-panel/";
-const RADIO = `${location.protocol}//${location.hostname}:8447`;  // Vice Radio's now-playing and skip (same as the Vice panel)
+const RADIO = `${location.protocol}//${location.hostname}:8447`;  // Hideout Radio's now-playing and skip (same as the Hideout panel)
 const E = {
   tv: "media_player.lg_tv", ps5: "switch.ps5", ps5Media: "media_player.playstation_5", ps5Last: "sensor.ps5_last_game",
   nsw: "binary_sensor.nintendo_switch", nswTime: "sensor.bedroom_sam_s_switch_used_screen_time",
@@ -14,7 +14,7 @@ const E = {
   storeFree: "sensor.system_monitor_disk_free_mnt_storage", storeUse: "sensor.system_monitor_disk_usage_mnt_storage",
   haBackup: "sensor.backup_last_successful_automatic_backup",
 };
-const INPUTS = [["Home", "Vice Home"], ["PS5", "PS5 Game Console"], ["Switch", "Nintendo Switch"], ["Sky", "Sky Box"]];
+const INPUTS = [["Home", "Hideout Home"], ["PS5", "PS5 Game Console"], ["Switch", "Nintendo Switch"], ["Sky", "Sky Box"]];
 const WHITES = [["Warm", 2700], ["Neutral", 4000], ["Cool", 6500]];
 
 const ic = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
@@ -35,7 +35,7 @@ const PLACES = [
   { id: "tv", name: "Starlight Drive-In", what: "LG TV", x: 168, y: 612 },
   { id: "ps5", name: "Neon Arcade", what: "PS5", x: 478, y: 566 },
   { id: "nsw", name: "Pier Arcade", what: "Nintendo Switch", x: 896, y: 604 },
-  { id: "radio", name: "Radio Hill", what: "Vice Radio", x: 196, y: 178 },
+  { id: "radio", name: "Radio Hill", what: "Hideout Radio", x: 196, y: 178 },
   { id: "light", name: "Lighthouse", what: "Ceiling light", x: 716, y: 902 },
   { id: "vault", name: "The Vault", what: "Backups", x: 404, y: 846 },
 ];
@@ -84,8 +84,8 @@ const MAP_SVG = `
     <path d="M870 760q20-8 40 0t40 0"/><path d="M810 900q20-8 40 0t40 0"/><path d="M620 140q14-6 28 0"/><path d="M630 700q14-6 28 0"/>
   </g>
   <g fill="none" stroke="rgba(110,200,255,.16)" stroke-width="26" stroke-linejoin="round"><path d="${MAINLAND}"/><path d="${ISLAND}"/></g>
-  <path d="${MAINLAND}" fill="#2a2140"/>
-  <path d="${ISLAND}" fill="#2a2140"/>
+  <path d="${MAINLAND}" fill="#25272c"/>
+  <path d="${ISLAND}" fill="#25272c"/>
   <g fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2"><path d="${MAINLAND}"/><path d="${ISLAND}"/></g>
   <g class="blocks" clip-path="url(#land)">${BLOCKS}</g>
   <path d="M752 122L766 402C776 522 792 642 782 762C774 862 746 932 706 962" fill="none" stroke="rgba(255,206,150,.42)" stroke-width="11"/>
@@ -98,7 +98,7 @@ const MAP_SVG = `
     </g>
     <g fill="rgba(126,226,168,.32)">${TREES}</g>
   </g>
-  <g fill="#2a2140" stroke="rgba(255,255,255,.22)" stroke-width="2"><ellipse cx="640" cy="330" rx="16" ry="30"/>
+  <g fill="#25272c" stroke="rgba(255,255,255,.22)" stroke-width="2"><ellipse cx="640" cy="330" rx="16" ry="30"/>
   <ellipse cx="636" cy="610" rx="22" ry="13"/><ellipse cx="646" cy="822" rx="13" ry="22"/></g>
   <g stroke="rgba(255,255,255,.16)" stroke-width="5" fill="none" stroke-linecap="round">
     <path d="M0 232H700M0 522H700M0 800H712M182 0V1000M404 0V872M0 940L240 700" clip-path="url(#land)"/>
@@ -112,12 +112,12 @@ const MAP_SVG = `
   <g class="lbl" fill="rgba(255,255,255,.34)" font-size="17" letter-spacing="5" font-weight="600">
     <text x="236" y="84">NORTH SHORE</text><text x="40" y="496">DOWNTOWN</text><text x="40" y="742">LITTLE PALMS</text>
     <text x="250" y="972">HARBOR</text><text x="668" y="494" fill="rgba(180,215,255,.3)" font-size="14" transform="rotate(-90 668 494)">THE BAY</text>
-    <text x="806" y="300" fill="rgba(255,214,170,.42)" font-size="15" transform="rotate(87 806 300)">VICE BEACH</text><text x="842" y="380" fill="rgba(255,255,255,.18)" letter-spacing="10">OCEAN</text>
+    <text x="806" y="300" fill="rgba(255,214,170,.42)" font-size="15" transform="rotate(87 806 300)">SILVER BEACH</text><text x="842" y="380" fill="rgba(255,255,255,.18)" letter-spacing="10">OCEAN</text>
   </g>
 </svg>`;
 
 const CSS = `
-:host{display:block;position:relative;height:100%;min-height:100vh;overflow:hidden;background:#0d0a14;color:#fff;
+:host{display:block;position:relative;height:100%;min-height:100vh;overflow:hidden;background:#0b0c0e;color:#fff;
   font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
 *{box-sizing:border-box;margin:0;padding:0}
 svg{display:block}
@@ -136,7 +136,7 @@ svg{display:block}
 @keyframes evade{50%{fill:rgba(0,0,0,.25);stroke:rgba(255,255,255,.55)}}
 .dot{width:8px;height:8px;border-radius:4px;background:#7ee2a8;box-shadow:0 0 0 3px rgba(126,226,168,.18);flex:none}
 .dot.bad{background:#ff8a7a;box-shadow:0 0 0 3px rgba(255,138,122,.2)}
-.dot.off{background:#9a96a3;box-shadow:none}
+.dot.off{background:#9a9ca3;box-shadow:none}
 .body{display:flex;gap:28px;align-items:flex-start}
 /* explicit size: HA's panel host has no fixed height for a percentage to work from (2026-11-16, map was 0 px) */
 .mapbox{position:relative;flex:none;width:min(calc(100vh - 150px),58vw);aspect-ratio:1;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.4)}
@@ -147,7 +147,7 @@ svg{display:block}
 .mapbox.hot{animation:siren 2.4s ease-in-out infinite}
 @keyframes siren{0%,100%{box-shadow:0 12px 40px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,90,90,.0)}25%{box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 3px rgba(255,90,90,.55)}75%{box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 3px rgba(90,140,255,.55)}}
 .blip{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:1}
-.blip .b{position:relative;width:46px;height:46px;border-radius:23px;display:grid;place-items:center;background:rgba(30,28,36,.94);
+.blip .b{position:relative;width:46px;height:46px;border-radius:23px;display:grid;place-items:center;background:rgba(30,31,34,.94);
   box-shadow:0 0 0 2px rgba(255,255,255,.28),0 6px 16px rgba(0,0,0,.45);color:rgba(255,255,255,.55);transition:.2s}
 .blip .b svg{width:22px;height:22px}
 .blip.on .b{color:#fff;box-shadow:0 0 0 2px #fff,0 0 14px rgba(255,255,255,.22),0 6px 16px rgba(0,0,0,.45)}
@@ -170,9 +170,9 @@ svg{display:block}
 .place .t{min-width:0;flex:1}
 .place.sel{box-shadow:0 0 0 2px #fff}
 .place.bad p{color:#ffb2a8}
-.sheet{position:fixed;inset:0;z-index:5;background:rgba(8,5,14,.55);display:none;align-items:center;justify-content:center}
+.sheet{position:fixed;inset:0;z-index:5;background:rgba(7,8,9,.55);display:none;align-items:center;justify-content:center}
 .sheet.show{display:flex}
-.pick{width:min(520px,92%);max-height:90%;overflow-y:auto;background:#1e1c24;border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.pick{width:min(520px,92%);max-height:90%;overflow-y:auto;background:#1c1d20;border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .ph{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .ph .i{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.12);flex:none}
 .ph .i svg{width:24px;height:24px}
@@ -195,7 +195,7 @@ svg{display:block}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;margin:6px 0 18px;
   background:linear-gradient(90deg,#fff var(--p,50%),rgba(255,255,255,.18) var(--p,50%));outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.toast{position:absolute;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:.25s;background:rgba(30,28,36,.96);
+.toast{position:absolute;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:.25s;background:rgba(30,31,34,.96);
   padding:12px 20px;border-radius:14px;font-size:15px;pointer-events:none;z-index:6;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 /* phone: the map full width on top, the places under it; names on the map only for the selected place */
@@ -222,8 +222,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 const HTML = `
 <div class="wrap">
   <div class="top">
-    <div class="round" id="back" title="Back to Vice">${ICON.back}</div>
-    <div class="title"><small>Vice City HQ</small><b>Vice Map</b></div>
+    <div class="round" id="back" title="Back to Hideout">${ICON.back}</div>
+    <div class="title"><small>The Hideout</small><b>Hideout Map</b></div>
     <div class="chip" id="chip"></div>
   </div>
   <div class="body">
@@ -409,7 +409,7 @@ class ViceMap extends HTMLElement {
       case "ps5": return `<div class="btns">${b("ps5", this.st(E.ps5) === "on" ? "Rest mode" : "Turn on")}</div>`;
       case "nsw": return this.st(E.nsw) === "on" ? `<div class="btns">${b("nswtv", "Put it on the TV")}</div>`
         : `<p class="line" style="font-size:14px;opacity:.7">It can't be woken over the network: press HOME on a Joy-Con.</p>`;
-      case "radio": return this.radio ? `<div class="btns">${b("skip", this.radio.src === "live" ? "Back to my music" : "Skip song")}${b("nav", "Listen on the Vice panel", "/vice")}</div>` : "";
+      case "radio": return this.radio ? `<div class="btns">${b("skip", this.radio.src === "live" ? "Back to my music" : "Skip song")}${b("nav", "Listen on the Hideout panel", "/vice")}</div>` : "";
       case "light": {
         const on = this.st(E.light) === "on", k = this.at(E.light, "color_temp_kelvin"), mode = this.at(E.light, "color_mode");
         const pct = Math.round((this.at(E.light, "brightness") || 0) / 2.55);
@@ -445,7 +445,7 @@ class ViceMap extends HTMLElement {
       case "nswtv": return this.call("script", "turn_on", { entity_id: "script.switch_on_tv" }, "TV: Switch");
       case "skip":
         return fetch(`${RADIO}/skip`, { method: "POST" }).then(() => { this.toast("Skipping"); setTimeout(() => this.readRadio(), 1500); })
-          .catch(() => this.toast("Vice Radio isn't answering"));
+          .catch(() => this.toast("Hideout Radio isn't answering"));
       case "light": return this.call("light", this.st(E.light) === "on" ? "turn_off" : "turn_on", { entity_id: E.light });
       case "white": return this.call("light", "turn_on", { entity_id: E.light, color_temp_kelvin: +arg });
     }

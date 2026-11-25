@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Publishes cleaned public copies of Shane's projects to GitHub (2026-11-16): Homelab, VICE-Bot, VICE-Radio (from
-~/homelab) and VICE-Home (from ~/tv-launcher). The full history stays private (Forgejo, and the GitHub copies
+"""Publishes cleaned public copies of Shane's projects to GitHub (2026-11-16): Homelab, Hideout-Bot, Hideout-Radio
+(from ~/homelab) and Hideout-Home (from ~/tv-launcher; all three were VICE-* until 2026-11-25). The full history stays private (Forgejo, and the GitHub copies
 homelab-private / vice-home-private).
 
 Each copy is the committed files of the source repo, minus private working notes, media (third-party artwork, logos,
@@ -26,11 +26,11 @@ REPOS = {  # source repo folder name -> [(public repo, subfolder or "", extra ex
     "homelab": [
         ("Homelab", "", ["discord-bot/*", "radio/*", "public/*", "maintenance/*", "psp/*", "forgejo-runner/*",
                          "home-assistant/panel/source/*", "home-assistant/panel/mockup/*"]),
-        ("VICE-Bot", "discord-bot", []),
-        ("VICE-Radio", "radio", []),
+        ("Hideout-Bot", "discord-bot", []),
+        ("Hideout-Radio", "radio", []),
     ],
     "tv-launcher": [
-        ("VICE-Home", "", ["mockup/*", "tools/perf/results-*", "tools/tvshot", "tools/tvkey", "tools/tvopen",
+        ("Hideout-Home", "", ["mockup/*", "tools/perf/results-*", "tools/tvshot", "tools/tvkey", "tools/tvopen",
                            "public/*"]),
     ],
 }
@@ -52,6 +52,11 @@ def scrubber():
     for real, fake in words.items():
         if real[0].isalpha():  # names: whole word only (letters around it), so "Jackson" or "jack" stay
             pats.append((re.compile(rf"(?<![A-Za-z]){re.escape(real)}(?![A-Za-z])"), fake))
+            if len(real) > 4:  # ...and its all-lower / all-upper forms ("london" as a data key): the check below
+                # is case-blind for these, so a lowercase one blocked every publish from 2026-11-17 to 11-25
+                for r, f in ((real.lower(), fake.lower()), (real.upper(), fake.upper())):
+                    if r != real:
+                        pats.append((re.compile(rf"(?<![A-Za-z]){re.escape(r)}(?![A-Za-z])"), f))
         else:
             pats.append((re.compile(re.escape(real)), fake))
     tail = re.compile(LEFTOVERS["Tailscale address"])

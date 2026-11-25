@@ -70,7 +70,7 @@ ceiling_light_send:
 # sensor.vice_osd (the Vice panel on the tablet and phone shows it as a banner); rest_command.vice_osd sends it to the
 # TV (Vice Home, or the overlay over anything). Returns vice-tv's answer: {"shown": bool}, false when the TV is off.
 vice_osd:
-  alias: Vice OSD card
+  alias: Hideout OSD card
   icon: mdi:message-badge-outline
   mode: queued
   fields:
@@ -82,6 +82,8 @@ vice_osd:
     dot: {description: "bad for a red dot", example: bad}
     ttl: {description: "Seconds on screen", example: 8}
     tag: {description: "Optional: script.vice_osd_clear with the same tag takes it off early", example: pixel_ring}
+    art: {description: "Optional picture instead of the icon: a vice-tv path (/covers/..., /football/<id>.png) or URL"}
+    accent: {description: "Optional: pink = our goal (a pulsing red edge; was pink until 2026-11-25)"}
   sequence:
     - event: vice_osd
       event_data:
@@ -93,6 +95,8 @@ vice_osd:
         dot: "{{ dot | default('') }}"
         ttl: "{{ ttl | default(8) }}"
         tag: "{{ tag | default('') }}"
+        art: "{{ art | default('') }}"
+        accent: "{{ accent | default('') }}"
     - action: rest_command.vice_osd
       data:
         title: "{{ title }}"
@@ -103,6 +107,8 @@ vice_osd:
         dot: "{{ dot | default('') }}"
         ttl: "{{ ttl | default(8) }}"
         tag: "{{ tag | default('') }}"
+        art: "{{ art | default('') }}"
+        accent: "{{ accent | default('') }}"
       response_variable: tv
       continue_on_error: true
     - variables:
@@ -112,7 +118,7 @@ vice_osd:
 
 # Takes Vice OSD cards with this tag off the TV and the Vice panel (e.g. the call was answered).
 vice_osd_clear:
-  alias: Vice OSD clear
+  alias: Hideout OSD clear
   icon: mdi:message-badge-outline
   mode: queued
   fields:

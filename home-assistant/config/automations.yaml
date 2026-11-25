@@ -10,7 +10,7 @@
         mac: 00:00:00:00:00:00
         broadcast_address: 192.168.0.255
 - id: tablet_panel_on_charge
-  alias: Tablet - show the Vice panel when it's plugged in
+  alias: Tablet - show the Hideout panel when it's plugged in
   description: Stay awake while charging is on in the tablet's developer options, so the panel stays up until unplugged.
   triggers:
     - trigger: state
@@ -118,8 +118,8 @@
                   message: "{% set n = (trigger.to_state.attributes.wanted or {}).get('stars', 0) | int %}{{ ('★' * n ~ '☆' * (5 - n) ~ ' Wanted') if n else 'Heads up' }}: {{ m[:90] ~ ('…' if m | length > 90 else '') }}"
 
 - id: vice_osd_pixel_ringing
-  alias: Vice OSD - Pixel ringing on the TV
-  description: A Vice OSD card on the LG (over anything) when the Pixel rings; the TV's own toast if that fails. 2026-11-14, ~/tv-launcher/vice-layer-plan.md
+  alias: Hideout OSD - Pixel ringing on the TV
+  description: A Hideout OSD card on the LG (over anything) when the Pixel rings; the TV's own toast if that fails. 2026-11-14, ~/tv-launcher/vice-layer-plan.md
   mode: single
   triggers:
     - trigger: state
@@ -145,8 +145,8 @@
             message: Your Pixel is ringing
 
 - id: vice_osd_pixel_ring_end
-  alias: Vice OSD - Pixel stopped ringing
-  description: Takes the "Your Pixel is ringing" card off the TV and the Vice panel once the call is answered or missed.
+  alias: Hideout OSD - Pixel stopped ringing
+  description: Takes the "Your Pixel is ringing" card off the TV and the Hideout panel once the call is answered or missed.
   mode: single
   triggers:
     - trigger: state
@@ -258,8 +258,8 @@
         message: "{{ what.split('/', 1)[1] }}"
 
 - id: vice_save_cover
-  alias: Vice panel - save the last game's art
-  description: Keeps a copy of each console's last game art in www/vice-panel/covers for the Vice panel.
+  alias: Hideout panel - save the last game's art
+  description: Keeps a copy of each console's last game art in www/vice-panel/covers for the Hideout panel.
   mode: queued
   triggers:
     - trigger: state
@@ -353,3 +353,55 @@
                     icon: server
                     ttl: 10
                   continue_on_error: true
+
+# Vice Football (2026-11-17, ~/homelab/vice-football-plan.md): each match moment from the vice-football service as a
+# Vice OSD card (TV + panel banner, 08:00-23:00) and a Pixel notification. Spoilers switch on = nothing at all.
+# One notification per match (tag), replaced each time. Our goals: channel "Football goals" (high, makes a sound);
+# everything else: channel "Football" (low, silent). Change sounds per channel on the phone.
+- id: vice_football_cards
+  alias: Football - match moments to the TV and the Pixel
+  mode: queued
+  max: 20
+  triggers:
+    - trigger: event
+      event_type: vice_football
+  conditions:
+    - condition: state
+      entity_id: input_boolean.football_spoilers_off
+      state: "off"
+    - condition: template
+      value_template: "{{ trigger.event.data.kind in ['pre', 'kickoff', 'goal', 'red', 'penalty', 'halftime', 'ruled_out', 'fulltime'] }}"
+  actions:
+    - variables:
+        e: "{{ trigger.event.data }}"
+        crest: "{{ (e.crests | default([]))[0] | default('') }}"
+        title: "{{ e.title ~ (('  ' ~ e.minute) if e.minute else '') }}"
+        big: "{{ e.kind in ['goal', 'fulltime'] }}"
+    - if:
+        - condition: time
+          after: "08:00:00"
+          before: "23:00:00"
+      then:
+        - action: script.vice_osd
+          continue_on_error: true
+          data:
+            title: "{{ title }}"
+            line: "{{ e.line }}"
+            em: "{{ e.em }}"
+            sub: "{{ e.sub }}"
+            art: "{{ '/football/' ~ crest ~ '.png' if crest else '' }}"
+            accent: "{{ 'pink' if e.ours else '' }}"
+            ttl: "{{ 12 if big else 8 }}"
+            tag: "{{ e.tag }}"
+    - action: notify.mobile_app_pixel_9_pro_xl
+      continue_on_error: true
+      data:
+        title: "{{ title }}"
+        message: "{{ [e.line, e.em] | select | join(' · ') }}{{ ('\n' ~ e.sub) if e.sub else '' }}"
+        data:
+          tag: "{{ e.tag }}"
+          group: football
+          channel: "{{ 'Football goals' if e.ours else 'Football' }}"
+          importance: "{{ 'high' if e.ours else 'low' }}"
+          icon_url: "{{ '/local/vice-panel/football/' ~ crest ~ '.png' if crest else '' }}"
+          clickAction: /vice

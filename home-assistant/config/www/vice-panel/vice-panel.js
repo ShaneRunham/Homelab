@@ -1,9 +1,10 @@
-// Vice panel for Home Assistant: the same look as Vice Home on the TV (~/tv-launcher/vice).
+// Hideout panel (was the Vice panel; renamed and GTA theme dropped 2026-11-25) for Home Assistant: the same graphite
+// look as Hideout Home on the TV (~/tv-launcher/vice).
 // A custom panel (panel_custom in configuration.yaml); HA hands it `hass`, so it uses the viewer's own login.
 // Tablet (wide) and phone (narrow) layouts. Mock-ups: ~/homelab/home-assistant/panel/mockup.
 
 const BASE = "/local/vice-panel/";
-// Vice Radio (~/homelab/radio): stream and now-playing JSON on the tailnet, same host as HA (tailscale serve :8447)
+// Hideout Radio (~/homelab/radio): stream and now-playing JSON on the tailnet, same host as HA (tailscale serve :8447)
 const RADIO = `${location.protocol}//${location.hostname}:8447`;
 const E = {
   tv: "media_player.lg_tv",
@@ -16,8 +17,9 @@ const E = {
   ram: "sensor.system_monitor_memory_usage", ssd: "sensor.system_monitor_disk_free",
   backups: "sensor.system_monitor_disk_free_mnt_storage",
   weather: "weather.home", services: "sensor.homelab_services", problems: "sensor.homelab_state", wanted: "sensor.wanted_level", person: "person.shane_runham",
+  football: "sensor.vice_football", spoil: "input_boolean.football_spoilers_off",
 };
-const INPUTS = [["Home", "Vice Home"], ["PS5", "PS5 Game Console"], ["Switch", "Nintendo Switch"], ["PS3", "PS3 Game Console"], ["Sky", "Sky Box"]];
+const INPUTS = [["Home", "Hideout Home"], ["PS5", "PS5 Game Console"], ["Switch", "Nintendo Switch"], ["PS3", "PS3 Game Console"], ["Sky", "Sky Box"]];
 const WHITES = [["Warm", 2700], ["Neutral", 4000], ["Cool", 6500]];
 const COLOURS = [["Pink", [255, 77, 109]], ["Purple", [155, 92, 255]], ["Blue", [63, 169, 255]], ["Orange", [255, 154, 60]]];
 const CONDITIONS = {
@@ -64,19 +66,22 @@ const ICON = {
   skip: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 5.5v13l9.5-6.5z"/><path d="M18.5 5v14" fill="none" stroke-linecap="round" stroke-width="2.2"/></svg>',
   map: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.1 5.6a2 2 0 0 0 1.8 0l3.7-1.9A1 1 0 0 1 21 4.6v12.8a1 1 0 0 1-.6.9l-4.5 2.3a2 2 0 0 1-1.8 0l-4.2-2.1a2 2 0 0 0-1.8 0l-3.7 1.9A1 1 0 0 1 3 19.4V6.6a1 1 0 0 1 .6-.9l4.5-2.3a2 2 0 0 1 1.8 0zM15 5.8v15M9 3.2v15"/></svg>',
   menu: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  // lucide "eye" / "eye-off" (ISC): the Football row's Spoilers chip
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.7 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M2 2l20 20"/></svg>',
   // lucide "mic" (ISC)
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>',
 };
 
 const CSS = `
-:host{display:block;position:relative;height:100%;min-height:100vh;overflow:hidden;background:#0d0a14;color:#fff;
+:host{display:block;position:relative;height:100%;min-height:100vh;overflow:hidden;background:#0b0c0e;color:#fff;
   font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
 *{box-sizing:border-box;margin:0;padding:0}
 svg{display:block}
-.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:62% center;background:#0d0a14 url(${BASE}poster.jpg?v=2) 62% center/cover}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% center;background:#0b0c0e url(${BASE}poster.jpg?v=3) center/cover}
 .scrim{position:absolute;inset:0;background:
-  linear-gradient(90deg,rgba(10,6,20,.62) 0%,rgba(10,6,20,.30) 48%,rgba(10,6,20,.10) 75%),
-  linear-gradient(180deg,rgba(10,6,20,.15) 0%,rgba(10,6,20,0) 22%,rgba(10,6,20,.25) 48%,rgba(10,6,20,.72) 100%)}
+  linear-gradient(90deg,rgba(9,10,12,.62) 0%,rgba(9,10,12,.30) 48%,rgba(9,10,12,.10) 75%),
+  linear-gradient(180deg,rgba(9,10,12,.15) 0%,rgba(9,10,12,0) 22%,rgba(9,10,12,.25) 48%,rgba(9,10,12,.72) 100%)}
 .wrap{position:relative;height:100%;overflow-y:auto;padding:40px 56px 40px}
 .top{display:flex;justify-content:space-between;align-items:center}
 .clock{font-size:20px;font-weight:450;opacity:.92;font-variant-numeric:tabular-nums}
@@ -86,11 +91,11 @@ svg{display:block}
 .round svg{width:20px;height:20px}
 .dot{width:8px;height:8px;border-radius:4px;background:#7ee2a8;box-shadow:0 0 0 3px rgba(126,226,168,.18);flex:none}
 .dot.bad{background:#ff8a7a;box-shadow:0 0 0 3px rgba(255,138,122,.2)}
-.dot.off{background:#9a96a3;box-shadow:none}
+.dot.off{background:#9a9ca3;box-shadow:none}
 .hero{margin-top:36px}
 .date{font-size:14px;letter-spacing:2.6px;font-weight:500;opacity:.72}
 .greet{font-size:64px;font-weight:600;letter-spacing:-3.4px;margin-top:6px;text-shadow:0 2px 24px rgba(0,0,0,.18);white-space:nowrap}
-.info{display:inline-flex;align-items:center;gap:10px;font-size:17px;color:rgba(255,255,255,.78);margin-top:10px;flex-wrap:wrap;padding:6px 14px;margin-left:-14px;border-radius:12px;background:rgba(14,10,24,.42)}  /* backing: it crossed the figures (2026-11-16), as on the TV */
+.info{display:inline-flex;align-items:center;gap:10px;font-size:17px;color:rgba(255,255,255,.78);margin-top:10px;flex-wrap:wrap;padding:6px 14px;margin-left:-14px;border-radius:12px;background:rgba(12,13,15,.42)}  /* backing: it crossed the figures (2026-11-16), as on the TV */
 .info b{color:#fff;font-weight:500}.info .sep{opacity:.5}
 .info span{display:flex;align-items:center;gap:10px}
 .wanted:empty{display:none}
@@ -101,7 +106,6 @@ svg{display:block}
 .info .wanted .evading i.on svg{animation:evade .8s steps(1) infinite}
 @keyframes evade{50%{fill:rgba(0,0,0,.25);stroke:rgba(255,255,255,.55)}}
 .dot.gone{display:none}
-.info span.gta{display:block}  /* plain text flow: no flex gap inside "GTA VI in 7 days" */
 .info svg{width:20px;height:20px;opacity:.75;flex:none}
 .label{font-size:17px;font-weight:500;opacity:.92;margin-bottom:14px}
 .label i{font-style:normal;opacity:.55;font-weight:400;margin-left:10px;font-size:15px}
@@ -128,7 +132,7 @@ svg.logo.nswitch{height:24px}
 .card p{font-size:14px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card p em{font-style:normal;color:#fff;opacity:.9}
 .sw{width:58px;height:34px;border-radius:17px;background:rgba(255,255,255,.16);position:relative;flex:none;cursor:pointer;transition:background .2s}
-.sw::after{content:"";position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:13px;background:#cfcbd6;transition:left .2s,background .2s}
+.sw::after{content:"";position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:13px;background:#cfd0d4;transition:left .2s,background .2s}
 .sw.on{background:#f2f2f2}.sw.on::after{left:28px;background:#141414}
 .sw.busy{opacity:.55}
 .big{flex-direction:column;align-items:stretch;justify-content:center;gap:16px;padding:0 22px;height:150px}
@@ -150,10 +154,10 @@ input[type=range]:disabled{opacity:.4}
 .stat b{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
 .stat b small{font-size:14px;font-weight:400;opacity:.7;margin-left:2px}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
-/* sheets and the photo viewer are pinned to the screen: with the news row the panel is taller than a phone screen */
-.sheet{position:fixed;inset:0;z-index:5;background:rgba(8,5,14,.55);display:none;align-items:center;justify-content:center}
+/* sheets are pinned to the screen: the panel can be taller than a phone screen */
+.sheet{position:fixed;inset:0;z-index:5;background:rgba(7,8,9,.55);display:none;align-items:center;justify-content:center}
 .sheet.show{display:flex}
-.pick{background:rgba(30,28,36,.96);border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.pick{background:rgba(30,31,34,.96);border-radius:18px;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .pick h4{font-size:18px;font-weight:500;margin-bottom:16px}
 .pick .chip{font-size:16px;padding:12px 22px}
 .done{display:flex;justify-content:flex-end;margin-top:18px}
@@ -181,7 +185,7 @@ input[type=range]:disabled{opacity:.4}
 .hour b{font-size:16px;font-weight:500;color:#fff}
 .wxnext{margin-top:18px;font-size:15px;color:rgba(255,255,255,.62)}
 .wxnext b{color:#fff;font-weight:500}
-.toast{position:absolute;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:.25s;background:rgba(30,28,36,.96);
+.toast{position:absolute;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:.25s;background:rgba(30,31,34,.96);
   padding:12px 20px;border-radius:14px;font-size:15px;box-shadow:0 12px 40px rgba(0,0,0,.5);pointer-events:none;max-width:90%;text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 /* Vice OSD banner (2026-11-14, ~/tv-launcher/vice-layer-plan.md step 7): the TV's card at the panel's scale (0.8:
@@ -189,7 +193,7 @@ input[type=range]:disabled{opacity:.4}
    right edge = the cards' edge), covering only the home pill and round buttons for a few seconds; under them it covered
    the greeting (Shane picked this from mock-ups, 2026-11-14). Phone: full width under the top bar. Cards come from
    script.vice_osd through sensor.vice_osd. Tap to dismiss. */
-.osd{position:absolute;right:56px;top:8px;z-index:30;width:min(453px,calc(100% - 112px));background:rgba(30,28,36,.96);
+.osd{position:absolute;right:56px;top:8px;z-index:30;width:min(453px,calc(100% - 112px));background:rgba(30,31,34,.96);
   box-shadow:0 18px 48px rgba(0,0,0,.5);opacity:0;transform:translateY(-10px);transition:opacity .25s,transform .25s;pointer-events:none}
 .osd.show{opacity:1;transform:none;pointer-events:auto}
 .osd .ic{width:80px;height:45px;border-radius:10px;background:rgba(255,255,255,.1);display:grid;place-items:center;flex:none}
@@ -218,60 +222,71 @@ input[type=range]:disabled{opacity:.4}
 .jbar input{flex:1;min-width:0;height:44px;border:0;border-radius:22px;padding:0 18px;font:inherit;font-size:15px;color:#fff;
   background:rgba(255,255,255,.08);outline:none;user-select:text}
 .jbar input::placeholder{color:rgba(255,255,255,.45)}
-/* GTA VI news (Rockstar Newswire, file written by the bot's rockstar_news.py): picture cards, post sheet, photo viewer */
-.gnews{margin-top:26px}
-.nrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-.ncard{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:rgba(32,32,38,.82);box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}
-.ncard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.ncard .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,6,20,0) 25%,rgba(10,6,20,.62) 58%,rgba(10,6,20,.95) 100%)}
-.ncard .txt{text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.ncard .new,.nnew{position:absolute;top:10px;left:10px;font-size:11px;font-weight:600;letter-spacing:1px;padding:4px 8px;border-radius:8px;background:#f2f2f2;color:#141414}
-.nhero{cursor:zoom-in}
-.nphotos .vid{position:relative;display:block}
-.nphotos .vid::after{content:"";position:absolute;left:50%;top:50%;width:0;height:0;margin:-9px 0 0 -6px;border-left:16px solid #fff;border-top:9px solid transparent;border-bottom:9px solid transparent;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
-.ncard .txt{position:absolute;left:14px;right:14px;bottom:11px}
-.ncard .src{font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap}
-.ncard .hl{font-size:15px;font-weight:600;line-height:1.25;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.pick.npost{width:min(980px,94%);max-height:92%;overflow-y:auto;display:flex;gap:24px;padding:20px}
-.nhero{width:46%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;flex:none;align-self:flex-start;background:rgba(255,255,255,.06)}
-.nbody{flex:1;min-width:0;display:flex;flex-direction:column}
-.nmeta{font-size:12px;letter-spacing:2px;color:rgba(255,255,255,.6);font-weight:500;margin-top:2px}
-.npost h4{font-size:22px;line-height:1.2;margin:8px 0 4px}
-.nsub{font-size:15px;color:rgba(255,255,255,.62);margin-bottom:14px;user-select:text}
-.nsub:empty{display:none}
-.npost .btn{text-decoration:none}
-.nphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:14px}
-.nphotos:empty{display:none}
-.nphotos img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;cursor:pointer;display:block}
-.npost .done{margin-top:auto;padding-top:16px}
-.viewer{position:fixed;inset:0;z-index:8;background:#050308;display:flex;align-items:center;justify-content:center}
-.viewer[hidden]{display:none}
-:host(.short) .viewer,:host(.phone) .viewer{padding-top:36px}  /* clear Android's status bar in the HA app */
-:host(.short) .vcap,:host(.phone) .vcap{padding-bottom:52px}  /* and its navigation bar */
-.viewer img{max-width:100%;max-height:100%;object-fit:contain}
-.vcap{position:absolute;left:0;right:0;bottom:0;padding:60px 24px 22px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;font-size:14px;line-height:1.45;color:rgba(255,255,255,.9);background:linear-gradient(180deg,rgba(5,3,8,0),rgba(5,3,8,.88) 55%);pointer-events:none}
-.vcap span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-.vcap b{font-weight:500;white-space:nowrap}
-.vnav{position:absolute;top:0;bottom:0;width:30%}
-.vnav.prev{left:0}.vnav.next{right:0}
-:host(.phone) .nrow{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;scrollbar-width:none}
-:host(.phone) .nrow::-webkit-scrollbar{display:none}
-/* on the phone each post is as wide as the cards above (Shane, 2026-11-12); swipe for the next, the dots show where you are */
-:host(.phone) .ncard{flex:0 0 100%;scroll-snap-align:start}
-.ndots{display:none}
-:host(.phone) .ndots{display:flex;justify-content:center;gap:7px;margin-top:10px}
-.ndots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.3);transition:background .2s}
-.ndots i.on{background:#fff}
-:host(.phone) .gnews{margin-top:28px}
-:host(.phone) .pick.npost{flex-direction:column;gap:14px;padding:16px}
-:host(.phone) .nhero{width:100%}
-:host(.mid) .nrow{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Vice Football (2026-11-17, ~/homelab/vice-football-plan.md): London + England cards, mock-up football-mockup/ */
+.foot{margin-top:26px}
+.foot .label{display:flex;align-items:center}
+.foot .label .chip{margin-left:auto;display:inline-flex;align-items:center;gap:7px;opacity:1}
+.foot .label .chip svg{width:16px;height:16px}
+.foot .label .chip.on{background:#f2f2f2;color:#141414}
+.fc{flex:1;min-width:0;height:auto;align-items:stretch;padding:16px 20px 18px;display:flex;flex-direction:column;gap:12px}
+.fc.live{box-shadow:0 8px 24px rgba(0,0,0,.25),inset 0 0 0 1.5px rgba(255,90,90,.55)}
+.fctop{display:flex;align-items:center;gap:10px;height:34px}
+.fctop img{width:30px;height:30px;object-fit:contain}
+.fctop h4{font-size:20px;font-weight:500;flex:1;margin:0}
+.fctop .comp{font-size:13px;color:rgba(255,255,255,.5)}
+.fctop .chip{display:inline-flex;align-items:center;gap:7px;cursor:default}
+.dot.live{background:#ff5a5a;box-shadow:0 0 0 3px rgba(255,90,90,.22);animation:fpulse 1.4s ease-in-out infinite}
+@keyframes fpulse{50%{opacity:.35}}
+.fscore{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px}
+.fside{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;letter-spacing:1px;min-width:0}
+.fside.away{justify-content:flex-end}
+.fside img{width:40px;height:40px;object-fit:contain;flex:none}
+.fnums{font-size:40px;font-weight:600;letter-spacing:-1px;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:14px}
+.fnums i{font-style:normal;opacity:.4;font-weight:400}
+.fnums.ko{font-size:28px;letter-spacing:0}
+.fc p{font-size:14px}
+.fres{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:12px;font-weight:600;margin-right:8px;vertical-align:1px}
+.fres.w{background:#7ee2a8;color:#0d2a1b}.fres.d{background:#9a9ca3;color:#141414}.fres.l{background:#ff8a7a;color:#2a0d0d}
+.fnext{display:flex;align-items:center;gap:14px}
+.fnext img{width:44px;height:44px;object-fit:contain}
+.fnext b{display:block;font-size:22px;font-weight:500}
+.fnext small{font-size:14px;color:rgba(255,255,255,.62)}
+.fhid{font-size:16px;color:rgba(255,255,255,.62);height:44px;display:flex;align-items:center;gap:10px}
+.fhid svg{width:20px;height:20px;opacity:.7}
+.info img.fcrest{width:20px;height:20px;object-fit:contain}
+.fc{cursor:pointer}
+.pick.fs{width:min(560px,92%);max-height:86vh;overflow-y:auto}
+.fs .fctop{margin-bottom:6px}
+.fs h5{font-size:13px;letter-spacing:1.6px;font-weight:500;color:rgba(255,255,255,.5);text-transform:uppercase;margin:18px 0 10px}
+.fs .fscore{margin:4px 0 6px}
+.fs .sub{font-size:14px;color:rgba(255,255,255,.62)}
+.ftl{display:flex;flex-direction:column;gap:2px}
+.ftl div,.fup div{display:flex;align-items:center;gap:12px;font-size:15px;padding:7px 0;border-top:1px solid rgba(255,255,255,.06)}
+.ftl div:first-child,.fup div:first-child{border-top:none}
+.ftl .m{width:52px;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums;flex:none}
+.ftl .k{width:118px;color:rgba(255,255,255,.62);flex:none}
+.ftl .k.red{color:#ff8a7a}
+.ftl .w{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftl img,.fup img{width:24px;height:24px;object-fit:contain;flex:none}
+.fup .d{width:150px;color:rgba(255,255,255,.62);flex:none}
+.fup .o{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fup .c{font-size:13px;color:rgba(255,255,255,.45);white-space:nowrap}
+:host(.phone) .fup .c{display:none}
+:host(.phone) .fup .d{width:146px;font-size:13.5px;white-space:nowrap}
+:host(.phone) .ftl .k{width:96px}
+/* (the GTA VI news row, its post sheet and photo viewer were removed with the GTA theme, 2026-11-25) */
+:host(.phone) .foot{margin-top:28px}
+:host(.phone) .card.fc{height:auto;padding:14px 16px 16px;gap:10px}
+:host(.phone) .fnums.ko{font-size:24px}
+:host(.phone) .fnums{font-size:34px}
+:host(.phone) .fside{font-size:14px}
+:host(.phone) .fside img{width:34px;height:34px}
 .jstate{font-size:14px;color:rgba(255,255,255,.55);margin-top:12px;min-height:20px}
 
 /* phone */
-:host(.phone) .scrim{position:fixed;background:linear-gradient(180deg,rgba(10,6,20,.30) 0%,rgba(10,6,20,.15) 20%,rgba(10,6,20,.55) 42%,rgba(10,6,20,.80) 100%)}
-:host(.phone) .bg{position:fixed;object-position:50% center;background:#0d0a14 url(${BASE}poster-phone.jpg?v=2) center/cover}
-/* phone: its own wallpaper (1080x2160 crop of the 4K GTA VI key-art loop, wall-phone.mp4, 2026-11-12), centred and pinned
+:host(.phone) .scrim{position:fixed;background:linear-gradient(180deg,rgba(9,10,12,.62) 0%,rgba(9,10,12,.38) 24%,rgba(9,10,12,.58) 44%,rgba(9,10,12,.82) 100%)}  /* the fjord's fog is bright behind the greeting */
+:host(.phone) .bg{position:fixed;object-position:50% center;background:#0b0c0e url(${BASE}poster-phone.jpg?v=3) center/cover}
+/* phone: its own wallpaper (a portrait cut of the TV's misty-fjord loop, wall-phone.mp4, 2026-11-25), centred and pinned
    to the screen so it stays put while the panel scrolls */
 :host(.phone) .wrap{padding:20px 20px 32px}
 :host(.phone) .clock{font-size:17px}
@@ -284,12 +299,11 @@ input[type=range]:disabled{opacity:.4}
 :host(.phone) .info{font-size:13px;gap:7px;display:flex;margin-right:-14px}
 :host(.phone) .info span{gap:7px}
 :host(.phone) .info > .sep{display:none}
-:host(.phone) .info > .sep.gta{display:block}  /* keep the dot between the weather and the countdown */
 :host(.phone) .info > span:last-child{flex-basis:100%;margin-top:4px}
 /* middle widths (760-960 px, the tablet in portrait): the light and PC cards stack; the status gets its own line */
 :host(.mid) .row.two{flex-direction:column;gap:26px}
+:host(.mid) .living .row{display:grid;grid-template-columns:1fr 1fr}  /* the tablet in portrait: 2 x 2 devices (in a row of four the names were cut to "R.", 2026-11-25) */
 :host(.mid) .info > .sep{display:none}
-:host(.mid) .info > .sep.gta{display:block}
 :host(.mid) .info > span:last-child{flex-basis:100%;margin-top:4px}
 /* short screens (under 1000 px tall: the tablet in landscape, the phone with Android's bars): tighter vertical
    spacing so the whole panel fits without scrolling (2026-11-12, second pass on the real devices) */
@@ -339,7 +353,7 @@ const HTML = `
     <div class="clock" id="clock"></div>
     <div class="right">
       <div class="home"><span class="dot" id="homeDot"></span><span id="home"></span></div>
-      <div class="round" id="mapBtn" title="Vice Map">${ICON.map}</div>
+      <div class="round" id="mapBtn" title="Hideout Map">${ICON.map}</div>
       <div class="round" id="jarvis" title="Talk to JARVIS">${ICON.mic}</div>
       <div class="round" id="menu" title="Menu">${ICON.menu}</div>
     </div>
@@ -347,7 +361,7 @@ const HTML = `
   <div class="hero">
     <div class="date" id="date"></div>
     <div class="greet" id="greet"></div>
-    <div class="info"><span id="weather" class="tap" title="Weather details"></span><span class="sep gta">·</span><span id="gta" class="gta"></span><span class="sep">·</span><span><span class="wanted" id="wanted"></span><span class="dot" id="svcDot"></span><span id="svc"></span></span></div>
+    <div class="info"><span id="weather" class="tap" title="Weather details"></span><span class="sep fb">·</span><span id="fb" class="fb"></span><span class="sep">·</span><span><span class="wanted" id="wanted"></span><span class="dot" id="svcDot"></span><span id="svc"></span></span></div>
   </div>
   <div class="living">
     <div class="label">Bedroom</div>
@@ -356,8 +370,12 @@ const HTML = `
       <div class="card dev" data-dev="ps5"><div class="dtop">${LOGO.ps5}<div class="sw" id="ps5Sw"></div></div><p id="ps5Sub"></p><p class="game" id="ps5Game"></p></div>
       <div class="card dev" data-dev="nsw"><div class="dtop">${LOGO.nswitch}<div class="sw" id="nswSw"></div></div><p id="nswSub"></p><p class="game" id="nswGame"></p></div>
       <div class="card dev" data-dev="ps3"><div class="dtop">${LOGO.ps3}<div class="sw" id="ps3Sw"></div></div><p id="ps3Sub"></p><p class="game" id="ps3Game"></p></div>
-      <div class="card dev radio" id="radioCard"><div class="dtop"><span class="rlogo"><span class="rart" id="rArt"></span><span class="rname">Vice Radio</span></span><div class="sw" id="rSw"></div></div><p id="rSub"></p><p class="game" id="rSrc"></p><span class="round rskip" id="rSkip" title="Skip song">${ICON.skip}</span></div>
+      <div class="card dev radio" id="radioCard"><div class="dtop"><span class="rlogo"><span class="rart" id="rArt"></span><span class="rname">Hideout Radio</span></span><div class="sw" id="rSw"></div></div><p id="rSub"></p><p class="game" id="rSrc"></p><span class="round rskip" id="rSkip" title="Skip song">${ICON.skip}</span></div>
     </div>
+  </div>
+  <div class="foot" id="foot" hidden>
+    <div class="label">Football <span class="chip" id="spoil"></span></div>
+    <div class="row" id="fcards"></div>
   </div>
   <div class="row two">
     <div>
@@ -378,26 +396,9 @@ const HTML = `
       </div>
     </div>
   </div>
-  <div class="gnews" id="gnews" hidden>
-    <div class="label">GTA VI news <i>From Rockstar Newswire</i></div>
-    <div class="nrow" id="nrow"></div>
-    <div class="ndots" id="ndots"></div>
-  </div>
 </div>
-<div class="sheet" id="nSheet"><div class="pick npost">
-  <img class="nhero" id="nHero" alt="">
-  <div class="nbody">
-    <div class="nmeta" id="nMeta"></div>
-    <h4 id="nTitle"></h4>
-    <p class="nsub" id="nSub"></p>
-    <div class="btns" id="nBtns"></div>
-    <div class="nphotos" id="nPhotos"></div>
-    <div class="done"><span class="btn" data-close="nSheet">Done</span></div>
-  </div>
-</div></div>
-<div class="viewer" id="viewer" hidden><img id="vImg" alt=""><div class="vcap"><span id="vAlt"></span><b id="vN"></b></div>
-  <span class="vnav prev" id="vPrev" aria-label="Previous photo"></span><span class="vnav next" id="vNext" aria-label="Next photo"></span></div>
 <div class="sheet" id="wxSheet"><div class="pick wx" id="wxBody"></div></div>
+<div class="sheet" id="fSheet"><div class="pick fs" id="fBody"></div></div>
 <div class="sheet" id="inputs"><div class="pick"><h4>Switch the TV to</h4><div class="btns" id="inputBtns"></div><div class="done"><span class="btn" data-close="inputs">Done</span></div></div></div>
 <div class="sheet" id="jSheet"><div class="pick jv">
   <h4>JARVIS</h4>
@@ -426,6 +427,7 @@ class VicePanel extends HTMLElement {
     this.pending = {};       // entity -> time of our last command, to show the switch as busy
     this.offArmed = 0;
     this.build();
+    this.backable();
     new ResizeObserver(() => {
       const w = this.offsetWidth, was = this.className;
       this.classList.toggle("phone", w < 760);
@@ -442,8 +444,6 @@ class VicePanel extends HTMLElement {
     const next = () => { this.renderClock(); this.tick = setTimeout(next, 60000 - (Date.now() % 60000) + 50); };
     next();
     this.hideSidebarForTablet();
-    clearInterval(this.newsT);
-    this.readNews(); this.newsT = setInterval(() => this.readNews(), 600000);
     clearInterval(this.radioT);
     this.readRadio(); this.radioT = setInterval(() => { if (!document.hidden) this.readRadio(); }, 10000);
     // the wallpaper stops while the app or tab is in the background (screen off, another app), and carries on after
@@ -455,9 +455,9 @@ class VicePanel extends HTMLElement {
   // markup, so a phone never downloads the big video first.
   wallpaper(phone) {
     // ?v= changes whenever the phone video is replaced, so the HA app doesn't keep showing a cached old one
-    const v = this.$("bg"), want = `${BASE}${phone ? "wall-phone.mp4?v=2" : "wall.mp4?v=2"}`;
+    const v = this.$("bg"), want = `${BASE}${phone ? "wall-phone.mp4?v=3" : "wall.mp4?v=3"}`;
     if (v.getAttribute("src") === want) return;
-    v.poster = `${BASE}${phone ? "poster-phone.jpg?v=2" : "poster.jpg?v=2"}`;
+    v.poster = `${BASE}${phone ? "poster-phone.jpg?v=3" : "poster.jpg?v=3"}`;
     v.src = want;
     v.play().catch(() => {});  // muted autoplay; the poster shows if it's refused
   }
@@ -471,9 +471,9 @@ class VicePanel extends HTMLElement {
     this.dispatchEvent(new CustomEvent("hass-dock-sidebar", { detail: { dock: "always_hidden" }, bubbles: true, composed: true }));
   }
 
-  disconnectedCallback() { clearTimeout(this.tick); clearInterval(this.newsT); clearInterval(this.radioT); this.radioWanted = false; this.stopRadio(); this.stopListening(true); document.removeEventListener("visibilitychange", this.onVis); }
+  disconnectedCallback() { clearTimeout(this.tick); clearInterval(this.radioT); this.radioWanted = false; this.stopRadio(); this.stopListening(true); document.removeEventListener("visibilitychange", this.onVis); }
 
-  // ---------- Vice Radio: what the PC's 80s station plays; the switch plays it on this device ----------
+  // ---------- Hideout Radio: what the PC's 80s station plays; the switch plays it on this device ----------
   async readRadio() {
     let n = null;
     try { n = await (await fetch(`${RADIO}/now`, { cache: "no-store" })).json(); } catch (e) { /* station off: shown below */ }
@@ -514,7 +514,7 @@ class VicePanel extends HTMLElement {
       if (this.audio !== a) return;
       this.stopRadio();
       if (++this.radioTries <= 3) { this.radioStarting = true; this.showRadio(); setTimeout(() => { if (this.radioWanted) this.startRadio(); }, 2000); }
-      else { this.radioStarting = false; this.showRadio(); this.toast("Vice Radio isn't answering"); }
+      else { this.radioStarting = false; this.showRadio(); this.toast("Hideout Radio isn't answering"); }
     };
     // Fed through Media Source Extensions (fetch the stream, append the pieces) it plays in about a second; a plain
     // <audio src=stream> waited ~4.5 s for its own buffer. Plain audio stays as the fallback.
@@ -522,13 +522,13 @@ class VicePanel extends HTMLElement {
     else { a = new Audio(`${RADIO}/vice-radio`); a.onerror = lost; a.onended = lost; }
     a.onplaying = () => { if (this.audio === a) { this.radioTries = 0; this.radioStarting = false; this.showRadio(); } };
     this.audio = a; this.radioStarting = true;
-    a.play().catch(() => { if (this.audio === a) { this.stopRadio(); this.radioStarting = false; this.showRadio(); this.toast("Vice Radio couldn't start"); } });
+    a.play().catch(() => { if (this.audio === a) { this.stopRadio(); this.radioStarting = false; this.showRadio(); this.toast("Hideout Radio couldn't start"); } });
     this.showRadio(); this.readRadio();
   }
   // skips for the whole station (it's Shane's own): the next song fades in; on a station visit, back to his music
   async skipRadio() {
     const live = this.radioNow && this.radioNow.src === "live";
-    try { await fetch(`${RADIO}/skip`, { method: "POST" }); } catch (e) { return this.toast("Vice Radio isn't answering"); }
+    try { await fetch(`${RADIO}/skip`, { method: "POST" }); } catch (e) { return this.toast("Hideout Radio isn't answering"); }
     this.toast(live ? "Back to your music" : "Skipping");
     setTimeout(() => this.readRadio(), 1500);
   }
@@ -541,72 +541,6 @@ class VicePanel extends HTMLElement {
       a.pause(); a.removeAttribute("src"); a.load();
       if (u && u.startsWith("blob:")) URL.revokeObjectURL(u);
     }
-  }
-
-  // ---------- GTA VI news: Rockstar Newswire posts with photos and videos (same feed as Vice Home on the TV) ----------
-  async readNews() {
-    let items;
-    try { items = (await (await fetch(`${BASE}gta6.json?t=${Date.now()}`)).json()).items || []; }
-    catch (e) { return; }  // keep what's shown
-    const key = JSON.stringify(items.slice(0, 4));
-    if (key === this.newsKey) return;  // same posts: leave the row (and its pictures) alone
-    this.newsKey = key;
-    const row = this.$("nrow"); row.innerHTML = "";
-    this.$("gnews").hidden = !items.length;
-    const seen = newsSeen(items);
-    items.slice(0, 4).forEach((x) => {
-      const c = document.createElement("div"), m = media(x);
-      c.className = "ncard";
-      c.innerHTML = `${x.image ? '<img alt="" loading="lazy">' : ""}<div class="shade"></div>`
-        + (isNew(seen, x.id) ? '<span class="new">NEW</span>' : "")
-        + `<div class="txt"><div class="src">${esc(day(x.date))}${m ? " · " + m : ""}</div><div class="hl">${esc(x.title)}</div></div>`;
-      if (x.image) pic(c.querySelector("img"), x.image, 640);
-      c.onclick = () => { markOpened(x.id); const b = c.querySelector(".new"); if (b) b.remove(); this.openNews(x); };
-      row.appendChild(c);
-    });
-    // phone: one dot per post, the one in view lit
-    const dots = this.$("ndots");
-    dots.innerHTML = row.children.length > 1 ? "<i></i>".repeat(row.children.length) : "";
-    const lit = () => {
-      const w = row.firstElementChild ? row.firstElementChild.offsetWidth + 12 : 1, n = Math.round(row.scrollLeft / w);
-      [...dots.children].forEach((d, i) => d.classList.toggle("on", i === n));
-    };
-    row.onscroll = lit; lit();
-  }
-
-  openNews(x) {
-    const hero = x.image || (x.photos[0] && x.photos[0].url) || "";
-    pic(this.$("nHero"), hero, 1920);
-    this.$("nMeta").textContent = `${day(x.date)} · Rockstar Newswire`.toUpperCase();
-    this.$("nTitle").textContent = x.title;
-    this.$("nSub").textContent = x.subtitle || "";
-    const link = (href, label) => `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>`;
-    this.$("nBtns").innerHTML = x.videos.map((v, i) => link(`https://www.youtube.com/watch?v=${v}`, x.videos.length > 1 ? `Play video ${i + 1}` : "Play video")).join("")
-      + link(x.url, "Read on Rockstar");
-    // the strip: each video's thumbnail (opens YouTube), then the photos when there's more than one (a single photo is
-    // the big picture already); the big picture opens full screen
-    const ph = this.$("nPhotos"); ph.innerHTML = "";
-    const view = (list, i) => { this.view = { list, i }; this.showPhoto(); this.$("viewer").hidden = false; };
-    if (x.videos.length > 1) x.videos.forEach((v) => {  // one video: the Play video button is enough
-      const a = document.createElement("a");
-      a.className = "vid"; a.href = `https://www.youtube.com/watch?v=${v}`; a.target = "_blank"; a.rel = "noopener";
-      a.innerHTML = `<img src="https://i.ytimg.com/vi/${esc(v)}/hqdefault.jpg" alt="Video" loading="lazy">`;
-      ph.appendChild(a);
-    });
-    if (x.photos.length > 1) x.photos.slice(0, 16).forEach((p, i) => {
-      const im = document.createElement("img");
-      pic(im, p.url, 640); im.alt = p.alt || ""; im.loading = "lazy";
-      im.onclick = () => view(x.photos, i);
-      ph.appendChild(im);
-    });
-    const big = x.photos.length ? x.photos : [{ url: hero, alt: x.title }];
-    this.$("nHero").onclick = () => view(big, 0);
-    this.$("nSheet").classList.add("show");
-  }
-
-  showPhoto() {
-    const { list, i } = this.view, p = list[i];
-    pic(this.$("vImg"), p.url, 1920); this.$("vAlt").textContent = p.alt || ""; this.$("vN").textContent = `${i + 1} / ${list.length}`;
   }
 
   set narrow(v) { this._narrow = v; }
@@ -651,6 +585,9 @@ class VicePanel extends HTMLElement {
   build() {
     this.$("inputs").onclick = (e) => this.closeInputs(e);
     this.$("weather").onclick = () => this.openWeather();
+    this.$("fcards").onclick = (e) => { const c = e.target.closest(".fc"); if (c) this.openFootball(c.dataset.team); };
+    this.$("fSheet").onclick = (e) => { if (e.target === this.$("fSheet")) this.$("fSheet").classList.remove("show"); };
+    this.$("spoil").onclick = () => this.toggle(E.spoil, "input_boolean", this.state(E.spoil) !== "on");
     this.root.addEventListener("click", (e) => { const c = e.target.closest && e.target.closest("[data-close]"); if (c) this.$(c.dataset.close).classList.remove("show"); });
     this.$("wxSheet").onclick = (e) => { if (e.target === this.$("wxSheet")) this.$("wxSheet").classList.remove("show"); };
     this.$("menu").onclick = () => this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true }));
@@ -658,13 +595,6 @@ class VicePanel extends HTMLElement {
     this.$("mapBtn").onclick = () => {  // Vice Map (vice-map.js), HA's own navigation
       history.pushState(null, "", "/vice-map");
       window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
-    };
-    this.$("nSheet").onclick = (e) => { if (e.target === this.$("nSheet")) this.$("nSheet").classList.remove("show"); };
-    this.$("viewer").onclick = (e) => {
-      const v = this.view;
-      if (e.target === this.$("vPrev") && v.i > 0) { v.i--; return this.showPhoto(); }
-      if (e.target === this.$("vNext") && v.i < v.list.length - 1) { v.i++; return this.showPhoto(); }
-      this.$("viewer").hidden = true;
     };
     this.$("jDone").onclick = () => this.closeJarvis();
     this.$("jSheet").onclick = (e) => { if (e.target === this.$("jSheet")) this.closeJarvis(); };
@@ -731,6 +661,22 @@ class VicePanel extends HTMLElement {
       this.offArmed = Date.now(); btn.textContent = "Tap again to turn off"; btn.classList.add("warn");
       setTimeout(() => { if (Date.now() - this.offArmed >= 4000) { btn.textContent = "Turn off PC"; btn.classList.remove("warn"); } }, 4100);
     };
+  }
+
+  // Android's Back closes an open sheet (it used to leave the HA app, 2026-11-25 inspection): a sheet opening adds a
+  // history entry, Back takes it off again; Done or a tap outside takes the entry off too
+  backable() {
+    const sheets = [...this.root.querySelectorAll(".sheet")], open = () => sheets.find((x) => x.classList.contains("show"));
+    new MutationObserver(() => {
+      const o = !!open();
+      if (o && !this.sheetEntry) { this.sheetEntry = true; history.pushState({ ...(history.state || {}), hideoutSheet: 1 }, ""); }
+      else if (!o && this.sheetEntry) { this.sheetEntry = false; if (history.state && history.state.hideoutSheet) history.back(); }
+    }).observe(this.root, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("popstate", () => {
+      const x = open(); if (!x) return;
+      this.sheetEntry = false;
+      if (x.id === "jSheet") this.closeJarvis(); else x.classList.remove("show");
+    });
   }
 
   closeInputs(e) { if (e.target === this.$("inputs")) this.$("inputs").classList.remove("show"); }
@@ -951,15 +897,63 @@ class VicePanel extends HTMLElement {
     this.putText("clock", time12(now));
     const pad = (n) => String(n).padStart(2, "0");
     this.putText("date", `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`);
-    // GTA VI countdown (release 19 Nov 2026, midnight local); gone after launch day
-    const days = Math.round((new Date(2026, 10, 19) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
-    // launch-day mode: from 19 Nov "out now" for a week, and your play time as soon as there is some
-    const played = this.num("sensor.gta_vi_minutes_played") || 0;
-    const text = days > 1 ? `GTA VI in <b>${days} days</b>` : days === 1 ? "GTA VI <b>tomorrow</b>"
-      : played > 0 ? `GTA VI · <b>${playtime(played)}</b> played` : days >= -6 ? "GTA VI <b>out now</b>" : "";
-    this.put("gta", text);
-    this.root.querySelectorAll(".gta").forEach((el) => { el.style.display = text ? "" : "none"; });
+    this.renderFootball(now);
     this.putText("greet", h < 5 ? "Still up, Shane?" : h < 12 ? "Good morning, Shane" : h < 18 ? "Good afternoon, Shane" : "Good evening, Shane");
+  }
+
+  // ---------- Vice Football (2026-11-17, ~/homelab/vice-football): London + England from sensor.vice_football ----------
+  renderFootball(now) {
+    const teams = this.attr(E.football, "teams");
+    const list = teams ? ["london", "england"].map((k) => teams[k]).filter(Boolean) : [];
+    this.$("foot").hidden = !list.length;
+    const hide = this.state(E.spoil) === "on";
+    this.put("spoil", hide ? `${ICON.eyeOff}Spoilers off` : `${ICON.eye}Spoilers`);
+    this.$("spoil").classList.toggle("on", hide);
+    const done = list.map((t) => fbCard(t, now, hide));
+    this.put("fcards", done.map((c) => c.html).join(""));
+    // info line on match days only; a live match beats one later today
+    const line = done.filter((c) => c.line).sort((a, b) => b.pri - a.pri)[0];
+    this.put("fb", line ? line.line : "");
+    this.root.querySelectorAll(".fb").forEach((el) => { el.style.display = line ? "" : "none"; });
+  }
+
+  // tap a Football card: the live (else last) match's timeline and the next fixtures
+  openFootball(id) {
+    const teams = this.attr(E.football, "teams") || {};
+    const t = Object.values(teams).find((x) => x.id === id);
+    if (!t) return;
+    const hide = this.state(E.spoil) === "on";
+    const img = (tid) => `<img src="${crestUrl(tid)}" alt="">`;
+    const comp = (c) => esc((c || "").replace(/^English /, ""));
+    const KIND = { goal: "Goal", og: "Own goal", pen: "Penalty", pen_missed: "Penalty missed", pen_saved: "Penalty saved", red: "Red card" };
+    const live = t.next && t.live && t.live.state !== "pre" ? t.live : null;
+    const g = live ? t.next : t.last, det = live || t.last_detail;
+    let html = `<div class="fctop">${img(t.id)}<h4>${esc(t.name)}</h4></div>`;
+    if (g && det) {
+      const sc = live ? live.score : [g.home.score, g.away.score];
+      const when = new Date(g.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      html += `<h5>${live ? (live.state === "in" ? `Live · ${esc(live.detail || live.clock)}` : "Full time") : "Last match"}</h5>`;
+      if (hide) html += `<div class="fhid">${ICON.eyeOff}Result hidden</div>`;
+      else {
+        html += `<div class="fscore"><div class="fside">${img(g.home.id)}<span>${esc(g.home.short)}</span></div><div class="fnums">${esc(sc[0])}<i>–</i>${esc(sc[1])}</div>` +
+          `<div class="fside away"><span>${esc(g.away.short)}</span>${img(g.away.id)}</div></div>`;
+        const tl = det.timeline || [];
+        html += tl.length ? `<div class="ftl">${tl.map((x) => `<div><span class="m">${esc(x.minute)}</span><span class="k${x.kind === "red" ? " red" : ""}">${KIND[x.kind] || ""}</span>` +
+          `<span class="w">${esc(x.who)}</span>${img(x.team)}</div>`).join("")}</div>` : `<p class="sub">No goals or red cards</p>`;
+      }
+      html += `<p class="sub" style="margin-top:8px">${comp(g.comp)} · ${esc(when)}${g.venue ? ` · ${esc(g.venue)}` : ""}</p>`;
+    }
+    const up = (t.coming || []).filter((x) => !live || x.id !== t.next.id);
+    if (up.length) {
+      html += `<h5>Coming up</h5><div class="fup">${up.map((x) => {
+        const d = new Date(x.date), home = x.home.id === t.id, o = home ? x.away : x.home;
+        return `<div><span class="d">${esc(d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }))} · ${esc(time12(d))}</span>` +
+          `${img(o.id)}<span class="o">${home ? "v" : "at"} ${esc(o.name)}</span><span class="c">${comp(x.comp)}</span></div>`;
+      }).join("")}</div>`;
+    }
+    html += `<div class="done"><span class="btn" data-close="fSheet">Done</span></div>`;
+    this.$("fBody").innerHTML = html;
+    this.$("fSheet").classList.add("show");
   }
 
   // Second line of a console card: the game being played, else "Last: <game>" (HA remembers it).
@@ -1050,15 +1044,6 @@ class VicePanel extends HTMLElement {
   }
 }
 
-// A news picture at display size: vice-tv keeps 640 and 1920 px copies of Rockstar's 3840x2160 pictures in news/
-// (file name = the first 16 hex of the address's SHA-1). The original if there's no copy (yet).
-function pic(im, url, w) {
-  im._want = url;
-  const show = (src) => { if (im._want !== url) return; im.onerror = src !== url ? () => { im.onerror = null; im.src = url; } : null; im.src = src; };
-  if (!url || !(window.crypto && crypto.subtle)) return show(url);
-  crypto.subtle.digest("SHA-1", new TextEncoder().encode(url))
-    .then((d) => show(`${BASE}news/${w}-${[...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16)}.jpg`), () => show(url));
-}
 // The radio through Media Source Extensions: fetch the MP3 stream, append it as it arrives; trims what played over a
 // minute ago. lost() runs once if the stream ends or fails. Same as Vice Home's player.
 function msePlayer(url, lost) {
@@ -1092,6 +1077,64 @@ function msePlayer(url, lost) {
 // "Still They Ride (2022 Remaster)" -> "Still They Ride" (same as Vice Home)
 function cleanTitle(t) { return String(t || "").replace(/\s*[([][^)\]]*remaster[^)\]]*[)\]]/ig, "").replace(/\s+-\s+[^-]*remaster.*$/i, ""); }
 // "2:05 pm"
+// Vice Football card for one team (t: next, last, live from vice-football's /api/football). Returns html, the
+// match-day info line (or ""), and its priority (live 3, full time 2, later today 1).
+const crestUrl = (id) => `${BASE}football/${id}.png`;
+function fbCard(t, now, hide) {
+  for (const g of [t.next, t.last]) if (g && g.comp) g.comp = g.comp.replace(/^English /, "");  // "Premier League"
+  const n = t.next, l = t.last, live = n && t.live;
+  const sameDay = (d) => d.toDateString() === now.toDateString();
+  const img = (id, cls = "") => `<img${cls ? ` class="${cls}"` : ""} src="${crestUrl(id)}" alt="">`;
+  const head = (right) => `<div class="fctop">${img(t.id)}<h4>${esc(t.name)}</h4>${right}</div>`;
+  const nums = (h, a) => `${esc(h)}<i>–</i>${esc(a)}`;
+  const sides = (g, mid, ko) => `<div class="fscore"><div class="fside">${img(g.home.id)}<span>${esc(g.home.short)}</span></div>` +
+    `<div class="fnums${ko ? " ko" : ""}">${mid}</div><div class="fside away"><span>${esc(g.away.short)}</span>${img(g.away.id)}</div></div>`;
+  const opp = (g) => (g.home.id === t.id ? g.away : g.home);
+  const ha = (g) => (g.home.id === t.id ? "H" : "A");
+  const res = (g, sc) => { const us = g.home.id === t.id ? +sc[0] - +sc[1] : +sc[1] - +sc[0]; return us > 0 ? "w" : us < 0 ? "l" : "d"; };
+  const usFirst = (g, sc) => (g.home.id === t.id ? `${esc(sc[0])}–${esc(sc[1])}` : `${esc(sc[1])}–${esc(sc[0])}`);
+  const vsOpp = (g) => `${g.home.id === t.id ? "v" : "at"} ${esc(opp(g).name)}`;
+  const badge = (r) => `<span class="fres ${r}">${r.toUpperCase()}</span>`;
+  const hid = `<div class="fhid">${ICON.eyeOff}Result hidden</div>`;
+  const ours = (goals) => goals.filter((x) => x.team === t.id).map((x) => `${esc(x.who)}${x.og ? " (og)" : ""} ${esc(x.minute)}`);
+  const card = (cls, html) => `<div class="card fc ${cls}" data-team="${t.id}">${html}</div>`;
+  const kickoff = (g) => new Date(g.date);
+  const dayTime = (d) => `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${time12(d)}`;
+
+  if (live && live.state === "in") {
+    const sc = live.score, clock = live.detail || live.clock;
+    const g = live.goals.map((x) => `${esc(x.who)}${x.og ? " (og)" : ""} ${esc(x.minute)}`).reverse();  // latest first
+    return { pri: 3,
+      html: card("live", head(`<span class="chip"><span class="dot live"></span>${esc(clock)}</span>`) +
+        (hide ? hid : sides(n, nums(sc[0], sc[1]))) +
+        `<p>${esc(n.comp)}${!hide && g.length ? ` · <em>${g[0]}</em>${g.length > 1 ? " · " + g.slice(1).join(" · ") : ""}` : ""}</p>`),
+      line: hide ? `<span>${img(t.id, "fcrest")}${esc(t.name)} · playing now</span>`
+        : `<span>${img(t.id, "fcrest")}<b>${usFirst(n, sc)}</b> ${vsOpp(n)} · ${esc(clock)}</span>` };
+  }
+  // full time: the match just ended (live), or the last result is from today; stays until midnight
+  const ft = live && live.state === "post" ? { g: n, sc: live.score, goals: live.goals }
+    : l && sameDay(new Date(l.date)) ? { g: l, sc: [l.home.score, l.away.score], goals: null } : null;
+  if (ft) {
+    const scorers = ft.goals ? ours(ft.goals) : [];
+    return { pri: 2,
+      html: card("", head(`<span class="chip">FT</span>`) + (hide ? hid : sides(ft.g, nums(ft.sc[0], ft.sc[1]))) +
+        `<p>${hide ? "" : badge(res(ft.g, ft.sc))}${esc(ft.g.comp)}${!hide && scorers.length ? ` · <em>${scorers.join(", ")}</em>` : ""}</p>`),
+      line: hide ? "" : `<span>${img(t.id, "fcrest")}FT <b>${usFirst(ft.g, ft.sc)}</b> ${vsOpp(ft.g)}</span>` };
+  }
+  const lastLine = l ? `<p>${hide ? "" : badge(res(l, [l.home.score, l.away.score]))}Last: <em>${hide ? "" : `${esc(l.home.score)}–${esc(l.away.score)} `}${esc(l.home.name)} v ${esc(l.away.name)}</em> · ${esc(l.comp)}</p>` : "";
+  if (n && sameDay(kickoff(n))) {  // match day, before kickoff
+    const mins = Math.round((kickoff(n) - now) / 60000);
+    const when = mins <= 0 ? "starting" : mins < 60 ? `in ${mins} min` : mins < 180 ? `in ${Math.floor(mins / 60)} h ${mins % 60} min` : time12(kickoff(n));
+    return { pri: 1,
+      html: card("", head(`<span class="chip"><span class="dot"></span>${when}</span>`) + sides(n, esc(time12(kickoff(n))), true) +
+        `<p>${esc(n.comp)}${n.venue ? ` · ${esc(n.venue)}` : ""}</p>`),
+      line: `<span>${img(t.id, "fcrest")}${vsOpp(n)} · <b>${esc(time12(kickoff(n)))}</b></span>` };
+  }
+  const next = n ? `<div class="fnext">${img(opp(n).id)}<div><b>v ${esc(opp(n).name)} (${ha(n)})</b><small>${esc(dayTime(kickoff(n)))} · ${esc(n.comp)}</small></div></div>`
+    : `<div class="fnext"><div><b>No fixture yet</b></div></div>`;
+  return { pri: 0, line: "", html: card("", head("") + next + lastLine) };
+}
+
 function time12(d) { const h = d.getHours(); return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; }
 // a problem message without its markdown or the command in brackets: "Container `x` is exited (Exited 2h)" -> "Container x is exited"
 function cleanProblem(m) { m = String(m).replace(/[`*]/g, "").split(/\.\s/)[0].replace(/\s*\((?:[^()]|\([^()]*\))*\)\s*$/, ""); return m.length > 60 ? m.slice(0, 58).replace(/[\s,;:]+\S*$/, "") + "…" : m; }  // cut at a word
@@ -1104,26 +1147,11 @@ function wantedStars(n, evading) {  // same as Vice Home (~/tv-launcher/vice/vic
 function problemLine(list) { return cleanProblem(list[0]) + (list.length > 1 ? ` · +${list.length - 1} more` : ""); }
 function known(v) { return v && !["None", "unavailable", "unknown", ""].includes(v) ? v : null; }
 // "PS5 Game Console" -> "PS5", "ITVX - fresh, free streaming" -> "ITVX", "Tubi: Free Movies & TV" -> "Tubi"
-function shortSource(s) { return s === "Vice Home" ? "Home" : s.replace(/ Game Console$/, "").split(/ - |: /)[0]; }
+function shortSource(s) { return s === "Hideout Home" || s === "Vice Home" ? "Home" : s.replace(/ Game Console$/, "").split(/ - |: /)[0]; }
 // "2026-11-10" -> "10 Nov"; what a post carries
-function day(iso) { const d = iso ? iso.split("-") : null; return d ? `${+d[2]} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][+d[1] - 1]}` : ""; }
 // "3 h 20 m" / "45 min"
 function playtime(m) { m = Math.round(m); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} m` : ""}`; }
 // "New" badges, remembered on this device: a post is new from when it first appears until it's opened (or 3 days)
-const SEEN_KEY = "vice-gta6-seen";
-function loadSeen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)); } catch (e) { return null; } }
-function saveSeen(st) { try { localStorage.setItem(SEEN_KEY, JSON.stringify(st)); } catch (e) { /* private mode: no badges */ } }
-function newsSeen(items) {
-  let st = loadSeen();
-  const now = Date.now();
-  if (!st) { st = { first: {}, opened: {} }; items.forEach((x) => { st.first[x.id] = 0; }); }  // first visit: nothing is "new"
-  items.forEach((x) => { if (!(x.id in st.first)) st.first[x.id] = now; });
-  saveSeen(st);
-  return st;
-}
-function isNew(st, id) { return !st.opened[id] && st.first[id] > 0 && Date.now() - st.first[id] < 3 * 864e5; }
-function markOpened(id) { const st = loadSeen(); if (st) { st.opened[id] = 1; saveSeen(st); } }
-function media(x) { return x.videos.length ? "Video" : x.photos.length > 1 ? `${x.photos.length} photos` : ""; }
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
 if (!customElements.get("vice-panel")) customElements.define("vice-panel", VicePanel);

@@ -36,9 +36,12 @@ if rpm -q "kernel-modules-$k" >/dev/null 2>&1; then ok "kernel $k has kernel-mod
 else fail "kernel $k has no kernel-modules package: install kernel kernel-modules kernel-modules-extra for it"; fi
 lsmod | grep -q '^amdgpu' && ok "amdgpu loaded" || fail "amdgpu not loaded (GPU driver missing)"
 [[ -e /sys/class/net/wlp3s0 ]] && ok "Wi-Fi wlp3s0 present" || fail "Wi-Fi wlp3s0 missing (services use 192.168.0.10)"
-cs=$(journalctl -b -q --no-pager -g 'CS has been rejected' 2>/dev/null | wc -l)
+# Only plasmashell's rejects mean the kernel crashes Plasma; other apps (e.g. chiaki-ng) can hit it too
+cs=$(journalctl -b -q --no-pager _COMM=plasmashell -g 'CS has been rejected' 2>/dev/null | wc -l)
 [[ $cs -eq 0 ]] && ok "no Plasma 'CS has been rejected' errors this boot" \
-  || fail "$cs 'CS has been rejected' errors this boot: kernel $k crashes Plasma, go back to 7.2.15 (see ~/CLAUDE.md)"
+  || fail "$cs Plasma 'CS has been rejected' errors this boot: kernel $k crashes Plasma, sudo grubby --set-default /boot/vmlinuz-7.2.15-200.fc44.x86_64 (see ~/CLAUDE.md)"
+other=$(journalctl -b -q --no-pager -g 'CS has been rejected' 2>/dev/null | grep -v ' plasmashell\[' | awk '{split($5, a, /[\[:]/); print a[1]}' | sort | uniq -c | awk '{printf "%s%s x%s", (NR>1?", ":""), $2, $1}')
+[[ -n $other ]] && echo "  info  'CS has been rejected' from other apps this boot (not Plasma): $other"
 
 echo "== Hardware open items"
 aer=$(grep -oP 'TOTAL_ERR_COR \K\d+' /sys/bus/pci/devices/0000:03:00.0/aer_dev_correctable 2>/dev/null)

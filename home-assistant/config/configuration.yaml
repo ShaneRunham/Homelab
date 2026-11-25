@@ -96,7 +96,8 @@ rest_command:
     content_type: application/json
     payload: >-
       {{ {"title": title, "line": line | default(""), "em": em | default(""), "sub": sub | default(""),
-          "icon": icon | default("bell"), "dot": dot | default(""), "ttl": ttl | default(8), "tag": tag | default("")} | tojson }}
+          "icon": icon | default("bell"), "dot": dot | default(""), "ttl": ttl | default(8), "tag": tag | default(""),
+          "art": art | default(""), "accent": accent | default("")} | tojson }}
     timeout: 5
   vice_osd_clear:
     url: http://127.0.0.1:5401/api/osd/clear
@@ -113,7 +114,7 @@ template:
       - trigger: event
         event_type: vice_osd
     sensor:
-      - name: Vice OSD
+      - name: Hideout OSD
         unique_id: vice_osd
         icon: mdi:message-badge-outline
         state: "{{ now().isoformat() }}"
@@ -131,7 +132,7 @@ template:
       - trigger: event
         event_type: vice_osd_clear
     sensor:
-      - name: Vice OSD clear
+      - name: Hideout OSD clear
         unique_id: vice_osd_clear
         icon: mdi:message-badge-outline
         state: "{{ now().isoformat() }}"
@@ -316,18 +317,37 @@ template:
             target:
               entity_id: switch.ps5_power
 
+# Vice Football (2026-11-17, ~/homelab/vice-football): London + England next/last/live from the vice-football
+# user service. The Vice panel's Football row and match-day info line read the `teams` attribute.
+rest:
+  - resource: http://127.0.0.1:5405/api/football
+    scan_interval: 30
+    timeout: 10
+    sensor:
+      - name: Football
+        unique_id: vice_football
+        icon: mdi:soccer
+        value_template: "{{ value_json.updated | int(0) }}"
+        json_attributes: [teams]
+
+# On: no football cards on the TV/phone and no scores on the panel (watching a match later). Panel: Spoilers chip.
+input_boolean:
+  football_spoilers_off:
+    name: Football spoilers off
+    icon: mdi:eye-off
+
 # The Vice panel (www/vice-panel): same look as Vice Home on the TV. Uses the logged-in user's session.
 panel_custom:
   - name: vice-panel
     url_path: vice
-    sidebar_title: Vice
-    sidebar_icon: mdi:palm-tree
-    module_url: /local/vice-panel/vice-panel.js?v=58
+    sidebar_title: Hideout
+    sidebar_icon: mdi:door-open
+    module_url: /local/vice-panel/vice-panel.js?v=65
     require_admin: false
-  # Vice Map (2026-11-16): the homelab as an invented city; the Vice panel's map button opens it
+  # Hideout Map (was Vice Map, 2026-11-16): the homelab as an invented city; the Hideout panel's map button opens it
   - name: vice-map
     url_path: vice-map
-    sidebar_title: Vice Map
+    sidebar_title: Hideout Map
     sidebar_icon: mdi:map-marker-radius
-    module_url: /local/vice-panel/vice-map.js?v=10
+    module_url: /local/vice-panel/vice-map.js?v=12
     require_admin: false

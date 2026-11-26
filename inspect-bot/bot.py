@@ -136,4 +136,4 @@ async def weekly():
 
 
 if __name__ == "__main__":
-    bot.run(TOKEN, log_level=logging.INFO)
+    bot.run(TOKEN, log_level=logging.INFO, root_logger=True)

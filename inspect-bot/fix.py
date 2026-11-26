@@ -14,7 +14,10 @@ Steps (run them in this order; the owner agrees to each first):
     safety       verification Medium, media filter for all members                   (#6, #7)
     automod      mention-spam + spam AutoMod rules                                    (#7)
     verified     create Verified, move RoVer under Staff, give Verified to every member
-    lock         hide categories from @everyone, show to Verified (--open "name,name" keeps channels open)
+    verifychannel  create #verify in Flying in and out (see + /verify, no chat) with the how-to message
+    flyingout    #flying-out read-only (Carl-bot and Welcomer can still post)
+    lock         hide categories from @everyone, show to Verified; skips private channels and channels outside
+                 categories (--open "name,name": a category holding one of these stays open)
 
 Needs the bot to have Manage Roles, Manage Server and Manage Channels, with its role just under Founder.
 """
@@ -51,6 +54,10 @@ BOT_RISKY = ["administrator", "manage_guild", "manage_channels", "manage_webhook
              "kick_members", "ban_members", "moderate_members", "manage_messages", "manage_nicknames",
              "manage_threads", "manage_expressions", "view_audit_log", "manage_events"]
 PERSONAL = ["BackWheelBandit", "🌊", "Graphic designer / SAFE 🔒"]
+VERIFY_TEXT = ("👋 **Welcome to DPGS!**\n"
+               "To unlock the server, type `/verify` and link your Roblox account. "
+               "Your nickname will change to your Roblox name.\n\n"
+               "Changed your Roblox name? Type `/update`.")
 AUTOMOD_EXEMPT = ["Founder", "Co Owner", "Staff", "Dyno", "Welcomer"]
 
 
@@ -210,25 +217,67 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
             plan.problems.append("No Verified role yet: run the verified step first")
         else:
             keep = {norm(n) for n in open_names}
+            everyone = g.default_role
             for c in g.categories:
                 if any(norm(ch.name).startswith(k) for ch in c.channels for k in keep):
                     plan.problems.append(f"Category {c.name} has an open channel in it: left as it is")
                     continue
                 plan.add(f"Category {c.name}: @everyone can't see it, Verified can", lock_action(c, g, verified))
                 for ch in c.channels:
-                    if not ch.permissions_synced:
-                        plan.add(f"  #{ch.name} (not synced to its category): same", lock_action(ch, g, verified))
-            for ch in g.channels:
-                if ch.category is None and not isinstance(ch, discord.CategoryChannel) \
-                        and not any(norm(ch.name).startswith(k) for k in keep):
-                    plan.add(f"#{ch.name} (no category): same", lock_action(ch, g, verified))
+                    if not ch.permissions_for(everyone).view_channel and ch.overwrites_for(everyone).view_channel is False:
+                        plan.problems.append(f"#{ch.name} is already private: left as it is")
+                    elif not ch.permissions_synced:
+                        plan.add(f"  #{ch.name} (own permissions, kept): same", lock_action(ch, g, verified))
+            # Channels outside categories (trap, bot-report, private ones) are never touched
+
+    if "verifychannel" in steps:
+        cat = next((c for c in g.categories if norm(c.name).startswith("flyingin")), None)
+        rover = next((m for m in g.members if m.bot and m.name.casefold() == "rover"), None)
+        if not cat or not rover:
+            plan.problems.append("Category 'Flying in and out' or RoVer not found")
+        elif any(norm(ch.name) == "verify" for ch in g.channels):
+            plan.problems.append("#verify already exists")
+        else:
+            ows = {g.default_role: discord.PermissionOverwrite(view_channel=True, send_messages=False,
+                                                               send_messages_in_threads=False,
+                                                               create_public_threads=False, add_reactions=False,
+                                                               use_application_commands=True),
+                   rover: discord.PermissionOverwrite(view_channel=True, send_messages=True, embed_links=True),
+                   me: discord.PermissionOverwrite(view_channel=True, send_messages=True, embed_links=True)}
+
+            async def make_verify():
+                ch = await g.create_text_channel("verify", category=cat, position=0, overwrites=ows,
+                                                 topic="Type /verify to link your Roblox account and unlock the server",
+                                                 reason="inspect-bot: RoVer verification channel")
+                await ch.send(VERIFY_TEXT)
+            plan.add(f"Create #verify at the top of {cat.name}: everyone sees it and can use /verify, can't chat; "
+                     f"post the how-to message", make_verify)
+
+    if "flyingout" in steps:
+        ch = next((c for c in g.text_channels if norm(c.name).startswith("flying-out")), None)
+        posters = [m for m in g.members if m.bot and m.name.casefold() in ("carl-bot", "welcomer")]
+        if not ch:
+            plan.problems.append("#flying-out not found")
+        else:
+            async def read_only():
+                ow = ch.overwrites_for(g.default_role)
+                ow.send_messages = ow.send_messages_in_threads = ow.create_public_threads = False
+                await ch.set_permissions(g.default_role, overwrite=ow, reason="inspect-bot: read-only")
+                for m in posters:
+                    await ch.set_permissions(m, view_channel=True, send_messages=True, embed_links=True,
+                                             reason="inspect-bot: can still post leave messages")
+            plan.add(f"#{ch.name}: read-only for everyone; {', '.join(m.name for m in posters)} can still post",
+                     read_only)
     return plan
 
 
 def lock_action(ch, g, verified):
+    """Adds to the existing overrides (so read-only channels stay read-only) instead of replacing them."""
     async def run():
-        await ch.set_permissions(g.default_role, view_channel=False, reason="inspect-bot: verify to see")
-        await ch.set_permissions(verified, view_channel=True, reason="inspect-bot: verify to see")
+        for target, see in ((g.default_role, False), (verified, True)):
+            ow = ch.overwrites_for(target)
+            ow.view_channel = see
+            await ch.set_permissions(target, overwrite=ow, reason="inspect-bot: verify to see")
     return run
 
 

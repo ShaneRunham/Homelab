@@ -235,7 +235,7 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
         rover = next((m for m in g.members if m.bot and m.name.casefold() == "rover"), None)
         if not cat or not rover:
             plan.problems.append("Category 'Flying in and out' or RoVer not found")
-        elif any(norm(ch.name) == "verify" for ch in g.channels):
+        elif any(norm(ch.name) in ("verify", "verification") for ch in g.channels):
             plan.problems.append("#verify already exists")
         else:
             ows = {g.default_role: discord.PermissionOverwrite(view_channel=True, send_messages=False,
@@ -246,7 +246,7 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
                    me: discord.PermissionOverwrite(view_channel=True, send_messages=True, embed_links=True)}
 
             async def make_verify():
-                ch = await g.create_text_channel("verify", category=cat, position=0, overwrites=ows,
+                ch = await g.create_text_channel("verification", category=cat, position=0, overwrites=ows,
                                                  topic="Type /verify to link your Roblox account and unlock the server",
                                                  reason="inspect-bot: RoVer verification channel")
                 await ch.send(VERIFY_TEXT)

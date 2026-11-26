@@ -72,10 +72,10 @@ def roles_section(guild: discord.Guild) -> Section:
         people = len(humans(role))
         if role.permissions.administrator:
             level = RED if people > 3 else AMBER
-            s.add(level, f"**{role.name}** has Administrator ({people} members). Keep this to the owner and one "
+            s.add(level, f"**{role.name}** has Administrator ({plural(people, "member")}). Keep this to the owner and one "
                          f"trusted admin role; give staff specific permissions instead.")
         else:
-            s.add(INFO, f"**{role.name}** ({people} members): {', '.join(perms)}. Check everyone in it is trusted.")
+            s.add(INFO, f"**{role.name}** ({plural(people, "member")}): {', '.join(perms)}. Check everyone in it is trusted.")
     if not s.findings:
         s.add(GREEN, "No role has dangerous permissions.")
     return s

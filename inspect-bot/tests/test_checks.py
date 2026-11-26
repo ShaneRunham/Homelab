@@ -24,8 +24,9 @@ def role(name, pos, members=(), default=False, managed=False, **perms):
     return r
 
 
-def member(name, bot=False, top=None, **perms):
-    return NS(name=name, bot=bot, top_role=top, guild_permissions=discord.Permissions(**perms))
+def member(name, bot=False, top=None, id=0, joined=None, **perms):
+    return NS(name=name, display_name=name, bot=bot, top_role=top, id=id, joined_at=joined,
+              guild_permissions=discord.Permissions(**perms))
 
 
 def channel(name, everyone_sees=True, last=NOW, overwrites=None):
@@ -113,6 +114,31 @@ class Checks(unittest.TestCase):
         r = role("Bot", 2, [member("Dyno", bot=True), member("Arcane", bot=True)], manage_channels=True)
         texts = " ".join(t for _, t in checks.roles_section(guild([everyone, r])).findings)
         self.assertIn("0 members, 2 bots", texts)
+
+    def test_activity_waits_for_two_weeks_of_tracking(self):
+        everyone = role("@everyone", 0, default=True)
+        g = guild([everyone], members=[member("a", id=1)])
+        s = checks.activity_section(g, {}, NOW - dt.timedelta(days=3), NOW)
+        self.assertEqual(levels(s), [checks.INFO])
+
+    def test_activity_lists_quiet_members(self):
+        everyone = role("@everyone", 0, default=True)
+        since = NOW - dt.timedelta(days=30)
+        talker, lurker, newbie = (member("talker", id=1), member("lurker", id=2),
+                                  member("newbie", id=3, joined=NOW - dt.timedelta(days=2)))
+        g = guild([everyone], members=[talker, lurker, newbie, member("Dyno", bot=True, id=4)])
+        s = checks.activity_section(g, {1: NOW - dt.timedelta(days=1)}, since, NOW)
+        text = s.findings[0][1]
+        self.assertIn("lurker (30d+)", text)
+        self.assertNotIn("talker", text)
+        self.assertNotIn("newbie", text)
+        self.assertNotIn("Dyno", text)
+
+    def test_nickname_fits_discord_limit(self):
+        import nicknames
+        self.assertEqual(nicknames.nickname("Viper", "ybd_nebula"), "Viper (@ybd_nebula)")
+        self.assertLessEqual(len(nicknames.nickname("DrivaDaveOfficial", "Jauntethebigboss")), 32)
+        self.assertTrue(nicknames.SUFFIX.search("jdot (@Jscott12230)"))
 
     def test_safety_settings_off(self):
         everyone = role("@everyone", 0, default=True)

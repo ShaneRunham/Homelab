@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
-"""Read-only inspection bot for one Discord server. /inspect (or every Monday 10:00) checks roles, permissions, bots,
-channels and safety settings and posts the report in #bot-report. It never changes anything in the server: the only
-thing it ever sends is the report."""
+"""Inspection bot for one Discord server. /inspect (or every Monday 10:00) checks roles, permissions, bots,
+channels, safety settings and member activity and posts the report in #bot-report.
+Two things it does besides reporting (2026-11-26):
+- Activity: notes when each member last sent a message or joined voice (times only, never message content),
+  kept in activity.json, so the report can list members quiet for 2+ weeks.
+- Names: when Bloxlink renames someone to "RobloxName (@RobloxUser)", it renames them to
+  "TheirServerName (@RobloxUser)", using the names remembered in names.json (see nicknames.py).
+It changes nothing else: no roles, channels or messages."""
 import datetime as dt
+import json
 import logging
 import os
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import tasks
 from dotenv import load_dotenv
 
 import checks
+import nicknames
 
 load_dotenv()
 TOKEN = os.environ["INSPECT_BOT_TOKEN"]
@@ -21,6 +30,7 @@ REPORT_CHANNEL = os.environ.get("REPORT_CHANNEL", "bot-report")
 WEEKLY = dt.time(10, 0, tzinfo=ZoneInfo("Europe/London"))
 COLOUR = {checks.RED: 0xE5484D, checks.AMBER: 0xF5A524, checks.GREEN: 0x30A46C, checks.INFO: 0x8B8D98}
 NO_PINGS = discord.AllowedMentions.none()
+ACTIVITY = Path(__file__).resolve().parent / "activity.json"
 
 log = logging.getLogger("inspect-bot")
 
@@ -30,8 +40,15 @@ class InspectBot(discord.Client):
         intents = discord.Intents.none()
         intents.guilds = True
         intents.members = True  # for role member counts and bots; a privileged intent (Developer Portal)
+        intents.guild_messages = True  # activity: when someone posts (not what; no message content intent)
+        intents.voice_states = True  # activity: when someone joins voice
         super().__init__(intents=intents, allowed_mentions=NO_PINGS)
         self.tree = app_commands.CommandTree(self)
+        data = json.loads(ACTIVITY.read_text()) if ACTIVITY.exists() else {}
+        self.since = dt.datetime.fromisoformat(data["since"]) if "since" in data else discord.utils.utcnow()
+        self.seen = {int(k): dt.datetime.fromisoformat(v) for k, v in data.get("seen", {}).items()}
+        self.dirty = "since" not in data
+        self.names = nicknames.load_names()
 
     def guild(self) -> discord.Guild | None:
         if GUILD_ID:
@@ -41,7 +58,60 @@ class InspectBot(discord.Client):
     async def on_ready(self):
         if not weekly.is_running():
             weekly.start()
+        if not save_activity.is_running():
+            save_activity.start()
         await self.set_up()
+
+    # --- activity -------------------------------------------------------------
+    def saw(self, member):
+        if member.guild == self.guild() and not member.bot:
+            self.seen[member.id] = discord.utils.utcnow()
+            self.dirty = True
+
+    async def on_message(self, message: discord.Message):
+        if isinstance(message.author, discord.Member):
+            self.saw(message.author)
+
+    async def on_voice_state_update(self, member, before, after):
+        if after.channel and after.channel != before.channel:
+            self.saw(member)
+
+    def save_activity(self):
+        data = {"since": self.since.isoformat(), "seen": {str(k): v.isoformat() for k, v in self.seen.items()}}
+        ACTIVITY.write_text(json.dumps(data))
+        self.dirty = False
+
+    # --- names ----------------------------------------------------------------
+    async def on_member_join(self, member):
+        if member.guild == self.guild() and not member.bot:
+            self.remember(member)
+
+    def remember(self, member):
+        """Keep the member's own server name, as long as it isn't a "(@roblox)" one."""
+        if not nicknames.SUFFIX.search(member.display_name) and self.names.get(str(member.id)) != member.display_name:
+            self.names[str(member.id)] = member.display_name
+            nicknames.save_names(self.names)
+
+    async def on_member_update(self, before, after):
+        if after.bot or after.guild != self.guild() or before.nick == after.nick:
+            return
+        if not nicknames.SUFFIX.search(after.display_name):
+            self.remember(after)  # they changed their own name: use it from now on
+            return
+        if "BLOXLINK_API_KEY" not in os.environ:
+            return
+        async with aiohttp.ClientSession() as s:  # trust Bloxlink's link, not whatever is in the nickname
+            username = await nicknames.roblox_username(s, after.guild.id, after.id)
+        if not username:
+            return
+        want = nicknames.nickname(nicknames.base_name(self.names, after), username)
+        if after.nick != want:  # our own edit comes back here and stops at this check
+            old = after.nick
+            try:
+                await after.edit(nick=want, reason="inspect-bot: ServerName (@RobloxUser)")
+                log.info("Renamed %s: %r -> %r", after, old, want)
+            except discord.HTTPException as e:
+                log.warning("Couldn't rename %s: %s", after, e)
 
     async def on_guild_join(self, _guild):
         await self.set_up()  # invited while running: add /inspect straight away, no restart needed
@@ -64,7 +134,8 @@ class InspectBot(discord.Client):
             await g.chunk()
         automod = await fetch_or_none(g.fetch_automod_rules())
         webhooks = await fetch_or_none(g.webhooks())
-        sections = checks.inspect(g, automod=automod, webhooks=webhooks, members_loaded=g.chunked)
+        sections = checks.inspect(g, automod=automod, webhooks=webhooks, members_loaded=g.chunked,
+                                  activity=(self.seen, self.since))
         for embed in build_embeds(g, sections, who):
             await channel.send(embed=embed)
         return channel
@@ -84,8 +155,8 @@ def build_embeds(g: discord.Guild, sections: list[checks.Section], who: str) -> 
         title=f"Server inspection: {g.name}",
         description=f"{checks.ICON[checks.RED]} {counts[checks.RED]} to fix now · "
                     f"{checks.ICON[checks.AMBER]} {counts[checks.AMBER]} to look at · "
-                    f"{checks.ICON[checks.GREEN]} {counts[checks.GREEN]} fine\n-# {who}. This bot only reads; "
-                    f"it changes nothing.",
+                    f"{checks.ICON[checks.GREEN]} {counts[checks.GREEN]} fine\n-# {who}. This report changes "
+                    f"nothing; the bot only ever fixes Bloxlink nicknames.",
         colour=COLOUR[worst], timestamp=discord.utils.utcnow())
     out = [summary]
     for s in sections:
@@ -133,6 +204,12 @@ async def weekly():
             await bot.report(g, "Weekly check")
         except Exception:
             log.exception("weekly report failed")
+
+
+@tasks.loop(minutes=10)
+async def save_activity():
+    if bot.dirty:
+        bot.save_activity()
 
 
 if __name__ == "__main__":

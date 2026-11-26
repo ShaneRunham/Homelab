@@ -26,6 +26,7 @@ DANGEROUS = {
 STAFF_PERMS = ("administrator", "manage_guild", "ban_members", "kick_members", "moderate_members")
 VERIFY_BOTS = ("rover", "bloxlink", "rowifi", "verify")
 DEAD_DAYS = 90
+QUIET_DAYS = 14  # activity: members with no message or voice for this long
 TEXT_TYPES = (discord.ChannelType.text, discord.ChannelType.news, discord.ChannelType.forum)
 
 
@@ -207,6 +208,35 @@ def safety_section(guild: discord.Guild, automod: list | None, webhooks: list | 
     return s
 
 
+def activity_section(guild: discord.Guild, seen: dict[int, dt.datetime], since: dt.datetime,
+                     now: dt.datetime) -> Section:
+    """seen: member id -> last message/voice time, tracked from `since`. Members never seen count from when tracking
+    began or when they joined, whichever is later."""
+    s = Section("Activity")
+    first = since + dt.timedelta(days=QUIET_DAYS)
+    if now < first:
+        s.add(INFO, f"Tracking messages and voice since {since:%d %b}. The first list of quiet members comes "
+                    f"on {first:%d %b}.")
+        return s
+    quiet = []
+    for m in guild.members:
+        if m.bot:
+            continue
+        last = seen.get(m.id) or max(since, m.joined_at or since)
+        days = (now - last).days
+        if days >= QUIET_DAYS:
+            quiet.append((days, m, m.id in seen))
+    if not quiet:
+        s.add(GREEN, f"Everyone has talked or been in voice in the last {QUIET_DAYS} days.")
+        return s
+    quiet.sort(key=lambda q: -q[0])
+    shown = ", ".join(f"{m.display_name} ({d}d{'' if was else '+'})" for d, m, was in quiet[:40])
+    more = f" and {len(quiet) - 40} more" if len(quiet) > 40 else ""
+    s.add(AMBER, f"**{plural(len(quiet), 'member')} quiet for {QUIET_DAYS}+ days** (no messages or voice): "
+                 f"{shown}{more}. `+` = not seen since tracking began.")
+    return s
+
+
 def plural(n: int, word: str) -> str:
     return f"{n} {word}{'' if n == 1 else 's'}"
 
@@ -216,12 +246,17 @@ def names(items, prefix="#", limit=15) -> str:
     return shown + (f" and {len(items) - limit} more" if len(items) > limit else "")
 
 
-def inspect(guild: discord.Guild, *, automod=None, webhooks=None, members_loaded=True, now=None) -> list[Section]:
+def inspect(guild: discord.Guild, *, automod=None, webhooks=None, members_loaded=True, now=None,
+            activity=None) -> list[Section]:
+    """activity: (seen, since) from the bot's tracker, or None to leave the Activity section out."""
     now = now or discord.utils.utcnow()
-    return [
+    sections = [
         safety_section(guild, automod, webhooks),
         roles_section(guild),
         bots_section(guild),
         channels_section(guild, now),
         cleanup_section(guild, members_loaded),
     ]
+    if activity:
+        sections.append(activity_section(guild, *activity, now))
+    return sections

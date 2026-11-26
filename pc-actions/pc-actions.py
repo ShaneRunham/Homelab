@@ -2,7 +2,7 @@
 """PC buttons for the Home Assistant panel. Listens on 127.0.0.1:5403 (PC only).
 POST /lock     lock the screen (KDE)
 POST /vscode   open VS Code on the PC's screen
-POST /poweroff log out and shut down cleanly (KDE), falling back to systemctl poweroff
+POST /poweroff log out and shut down cleanly (KDE), forcing systemctl poweroff if KDE fails or hangs 90 s
 POST /restart-container/<name>  restart a Docker container (only names `docker ps -a` lists; runs under sg docker)
 POST /restart-unit/<unit>       restart one of the user services the Discord bot watches (collect.USER_UNITS)
 Same methods as the Discord bot's PC controls. Used by HA's buttons and the action buttons on alert notifications."""
@@ -17,13 +17,22 @@ def run(*cmd):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=20).returncode == 0
 
 
+def poweroff():
+    if not run("qdbus", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown.logoutAndShutdown"):
+        return run("systemctl", "poweroff")
+    # KDE's logout can hang on an app's "save changes?" box nobody sees (2026-11-26), so force it after 90 s.
+    # A clean shutdown stops this timer with the user manager; a repeat press finds it already queued.
+    run("systemd-run", "--user", "--collect", "--unit=pc-actions-poweroff-backstop", "--on-active=90",
+        "systemctl", "poweroff")
+    return True
+
+
 ACTIONS = {
     "/lock": lambda: run("qdbus", "org.freedesktop.ScreenSaver", "/ScreenSaver", "Lock")
                      or run("loginctl", "lock-sessions"),
     # Its own transient unit, so VS Code isn't tied to (or killed with) this service.
     "/vscode": lambda: run("systemd-run", "--user", "--collect", f"--unit=vscode-from-ha-{int(time.time())}", "/usr/bin/code"),
-    "/poweroff": lambda: run("qdbus", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown.logoutAndShutdown")
-                         or run("systemctl", "poweroff"),
+    "/poweroff": poweroff,
 }
 
 

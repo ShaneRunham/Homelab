@@ -108,6 +108,12 @@ class Checks(unittest.TestCase):
         self.assertIn("nobody has: Fans", texts)
         self.assertIn("same name: fans", texts)
 
+    def test_bots_counted_in_role(self):
+        everyone = role("@everyone", 0, default=True)
+        r = role("Bot", 2, [member("Dyno", bot=True), member("Arcane", bot=True)], manage_channels=True)
+        texts = " ".join(t for _, t in checks.roles_section(guild([everyone, r])).findings)
+        self.assertIn("0 members, 2 bots", texts)
+
     def test_safety_settings_off(self):
         everyone = role("@everyone", 0, default=True)
         g = guild([everyone], verification=discord.VerificationLevel.none, mfa=discord.MFALevel.disabled,

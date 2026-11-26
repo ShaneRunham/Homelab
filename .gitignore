@@ -77,3 +77,4 @@ nxapi/data/
 # Vice Football crests (club/FA trademarks: not for the public mirror)
 home-assistant/config/www/vice-panel/football/
 inspect-bot/backups/
+inspect-bot/names.json

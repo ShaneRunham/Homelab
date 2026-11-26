@@ -9,12 +9,18 @@ import asyncio
 import os
 import sys
 
+import json
+import re
+from pathlib import Path
+
 import aiohttp
 import discord
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 APPLY = "--apply" in sys.argv
+NAMES = Path(__file__).resolve().parent / "names.json"  # member id -> server name before any "(@...)" was added
+SUFFIX = re.compile(r" \(@[^)]*\)$")
 
 
 def nickname(display, username):
@@ -39,6 +45,11 @@ async def roblox_id(s, guild_id, member_id):
 async def run(g):
     me = g.me
     rename, linked_ok, unlinked, cant = [], 0, [], []
+    names = json.loads(NAMES.read_text()) if NAMES.exists() else {}
+    for m in g.members:  # remember names while they're still the person's own
+        if not m.bot and str(m.id) not in names and not SUFFIX.search(m.display_name):
+            names[str(m.id)] = m.display_name
+    NAMES.write_text(json.dumps(names, indent=1, ensure_ascii=False))
     async with aiohttp.ClientSession() as s:
         for m in sorted((m for m in g.members if not m.bot), key=lambda m: m.name):
             if m == g.owner or m.top_role >= me.top_role:
@@ -51,8 +62,8 @@ async def run(g):
                 continue
             async with s.get(f"https://users.roblox.com/v1/users/{rid}") as r:
                 u = await r.json()
-            # current server name; if Bloxlink already renamed them, fall back to their Discord display name
-            base = m.global_name or m.name if m.nick and m.nick.endswith(")") and " (@" in m.nick else m.display_name
+            # remembered server name; if Bloxlink renamed them before we saw them, their Discord display name
+            base = names.get(str(m.id)) or m.global_name or m.name
             new = nickname(base, u["name"])
             if m.nick == new:
                 linked_ok += 1

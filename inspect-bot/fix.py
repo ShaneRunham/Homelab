@@ -274,7 +274,8 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
 def lock_action(ch, g, verified):
     """Adds to the existing overrides (so read-only channels stay read-only) instead of replacing them."""
     async def run():
-        for target, see in ((g.default_role, False), (verified, True)):
+        # Let Verified and this bot in first: hiding from @everyone first would hide the channel from the bot too
+        for target, see in ((verified, True), (g.me, True), (g.default_role, False)):
             ow = ch.overwrites_for(target)
             ow.view_channel = see
             await ch.set_permissions(target, overwrite=ow, reason="inspect-bot: verify to see")

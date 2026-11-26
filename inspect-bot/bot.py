@@ -57,7 +57,7 @@ class InspectBot(discord.Client):
         log.info("Ready in %s", g.name)
 
     async def report(self, g: discord.Guild, who: str) -> discord.TextChannel:
-        channel = discord.utils.get(g.text_channels, name=REPORT_CHANNEL)
+        channel = next((c for c in g.text_channels if REPORT_CHANNEL in c.name), None)  # survives an emoji prefix
         if not channel:
             raise RuntimeError(f"No #{REPORT_CHANNEL} channel I can see")
         if not g.chunked:

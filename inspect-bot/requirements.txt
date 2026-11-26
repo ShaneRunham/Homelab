@@ -1,0 +1,3 @@
+# Same venv as the homelab bot (~/.local/share/homelab-bot-venv); CI installs this.
+discord.py==2.7.1
+python-dotenv==1.2.4

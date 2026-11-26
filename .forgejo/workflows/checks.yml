@@ -28,6 +28,14 @@ jobs:
       - run: cd discord-bot && python -m unittest discover -s tests
       - run: pip install -q --root-user-action=ignore pyflakes && python -m pyflakes discord-bot/*.py
 
+  inspect-bot-tests:
+    runs-on: docker
+    container: { image: "python:3.14-alpine" }
+    steps:
+      - run: eval "$FETCH"
+      - run: pip install -q --root-user-action=ignore -r inspect-bot/requirements.txt pyflakes
+      - run: cd inspect-bot && python -m unittest discover -s tests && python -m pyflakes *.py tests/*.py
+
   compose:
     # A broken compose.yaml would stop the 04:00 image update from recreating containers.
     runs-on: docker

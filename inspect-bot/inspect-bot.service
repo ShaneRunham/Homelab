@@ -1,0 +1,14 @@
+[Unit]
+Description=Server inspection Discord bot (~/homelab/inspect-bot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/homelab/inspect-bot
+ExecStart=%h/.local/share/homelab-bot-venv/bin/python bot.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

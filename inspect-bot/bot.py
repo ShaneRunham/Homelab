@@ -39,14 +39,21 @@ class InspectBot(discord.Client):
         return self.guilds[0] if len(self.guilds) == 1 else None
 
     async def on_ready(self):
+        if not weekly.is_running():
+            weekly.start()
+        await self.set_up()
+
+    async def on_guild_join(self, _guild):
+        await self.set_up()  # invited while running: add /inspect straight away, no restart needed
+
+    async def set_up(self):
         g = self.guild()
         if not g:
-            log.error("Not in the server (GUILD_ID=%s, in %d servers)", GUILD_ID, len(self.guilds))
+            log.warning("Not in the server yet (GUILD_ID=%s, in %d servers); waiting for the invite",
+                        GUILD_ID, len(self.guilds))
             return
         self.tree.copy_global_to(guild=g)
         await self.tree.sync(guild=g)
-        if not weekly.is_running():
-            weekly.start()
         log.info("Ready in %s", g.name)
 
     async def report(self, g: discord.Guild, who: str) -> discord.TextChannel:

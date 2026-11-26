@@ -224,6 +224,8 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
                     continue
                 plan.add(f"Category {c.name}: @everyone can't see it, Verified can", lock_action(c, g, verified))
                 for ch in c.channels:
+                    if ch.permissions_synced:
+                        continue  # follows the category
                     if not ch.permissions_for(everyone).view_channel and ch.overwrites_for(everyone).view_channel is False:
                         plan.problems.append(f"#{ch.name} is already private: left as it is")
                     elif not ch.permissions_synced:

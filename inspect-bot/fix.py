@@ -42,6 +42,7 @@ BOT_PERMS = {
     "jockie music": P(**BASIC, connect=True, speak=True, use_voice_activation=True),
     "welcomer": P(**BASIC, attach_files=True, manage_roles=True),
     "arcane": P(**BASIC, manage_roles=True),
+    "rover": P(**BASIC, manage_roles=True, manage_nicknames=True),
     "dyno": P(**BASIC, attach_files=True, add_reactions=True, manage_messages=True, manage_roles=True,
               manage_nicknames=True, kick_members=True, ban_members=True, moderate_members=True, view_audit_log=True),
 }
@@ -190,10 +191,10 @@ async def build(g: discord.Guild, steps, open_names) -> Plan:
                                                              reason="inspect-bot: RoVer verified role")
             plan.add("Create role Verified (no permissions)" if not verified else "Use existing role Verified",
                      make_verified)
-            plan.add(f"Move RoVer's role from position {rover_role.position} to just under Staff "
-                     f"({staff.position - 1}), above every member role",
-                     lambda: rover_role.edit(position=staff.position - 1 if staff.position - 1 < me.top_role.position
-                                             else me.top_role.position - 1, reason="inspect-bot: RoVer can rename"))
+            target = min(staff.position, me.top_role.position) - 1
+            plan.add(f"Move RoVer's role from position {rover_role.position} to {target} (just under "
+                     f"{'Staff' if staff.position <= me.top_role.position else me.top_role.name}), above every member role",
+                     lambda: rover_role.edit(position=target, reason="inspect-bot: RoVer can rename"))
             people = [m for m in g.members if not m.bot and (not verified or verified not in m.roles)]
 
             async def give_all():

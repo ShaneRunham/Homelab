@@ -6,6 +6,7 @@ Two things it does besides reporting (2026-11-26):
   kept in activity.json, so the report can list members quiet for 2+ weeks.
 - Names: when Bloxlink renames someone to "RobloxName (@RobloxUser)", it renames them to
   "TheirServerName (@RobloxUser)", using the names remembered in names.json (see nicknames.py).
+- Backup: every Sunday 04:00 it saves the whole layout to backups/auto-*.json (snapshot.py), keeping 12.
 It changes nothing else: no roles, channels or messages."""
 import datetime as dt
 import json
@@ -22,12 +23,14 @@ from dotenv import load_dotenv
 
 import checks
 import nicknames
+import snapshot
 
 load_dotenv()
 TOKEN = os.environ["INSPECT_BOT_TOKEN"]
 GUILD_ID = int(os.environ.get("GUILD_ID") or 0)
 REPORT_CHANNEL = os.environ.get("REPORT_CHANNEL", "bot-report")
 WEEKLY = dt.time(10, 0, tzinfo=ZoneInfo("Europe/London"))
+BACKUP_AT = dt.time(4, 0, tzinfo=ZoneInfo("Europe/London"))  # Sundays: snapshot.py layout backup
 WEEKLY_ON = os.environ.get("WEEKLY_REPORT", "on") != "off"  # Shane turned it off 2026-11-27; /inspect still works
 COLOUR = {checks.RED: 0xE5484D, checks.AMBER: 0xF5A524, checks.GREEN: 0x30A46C, checks.INFO: 0x8B8D98}
 NO_PINGS = discord.AllowedMentions.none()
@@ -61,6 +64,8 @@ class InspectBot(discord.Client):
             weekly.start()
         if not save_activity.is_running():
             save_activity.start()
+        if not weekly_backup.is_running():
+            weekly_backup.start()
         await self.set_up()
 
     # --- activity -------------------------------------------------------------
@@ -205,6 +210,20 @@ async def weekly():
             await bot.report(g, "Weekly check")
         except Exception:
             log.exception("weekly report failed")
+
+
+@tasks.loop(time=BACKUP_AT)
+async def weekly_backup():
+    if dt.datetime.now(BACKUP_AT.tzinfo).weekday() != 6:  # Sundays only
+        return
+    g = bot.guild()
+    if g:
+        try:
+            if not g.chunked:
+                await g.chunk()
+            log.info("Layout backup saved: %s", snapshot.save(g).name)
+        except Exception:
+            log.exception("layout backup failed")
 
 
 @tasks.loop(minutes=10)

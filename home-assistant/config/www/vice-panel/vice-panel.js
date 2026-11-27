@@ -1142,7 +1142,7 @@ const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.5 1.3 
 function wantedStars(n, evading) {  // same as Vice Home (~/tv-launcher/vice/vice.js)
   const lit = n || evading;
   if (!lit) return "";
-  return `<span class="${n ? "" : "evading"}">` + [0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? "on" : ""}">${STAR}</i>`).join("") + "</span>";
+  return `<span class="${n ? "" : "evading"}">` + [0, 1, 2, 3, 4, 5].map(i => `<i class="${i < lit ? "on" : ""}">${STAR}</i>`).join("") + "</span>";
 }
 function problemLine(list) { return cleanProblem(list[0]) + (list.length > 1 ? ` · +${list.length - 1} more` : ""); }
 function known(v) { return v && !["None", "unavailable", "unknown", ""].includes(v) ? v : null; }

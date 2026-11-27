@@ -244,7 +244,7 @@ if (!document.getElementById("vice-panel-font")) {
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z"/></svg>';
-const stars = (n, evading) => `<span class="stars${n ? "" : " evading"}">` + [0, 1, 2, 3, 4].map((i) => `<i class="${i < (n || evading) ? "on" : ""}">${STAR}</i>`).join("") + "</span>";
+const stars = (n, evading) => `<span class="stars${n ? "" : " evading"}">` + [0, 1, 2, 3, 4, 5].map((i) => `<i class="${i < (n || evading) ? "on" : ""}">${STAR}</i>`).join("") + "</span>";
 const ago = (t) => {
   const m = Math.max(0, Math.round((Date.now() / 1000 - t) / 60));
   return m < 1 ? "just now" : m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 1440)} days`;

@@ -198,7 +198,7 @@ template:
              or states('sensor.system_monitor_memory_usage') | float(0) > 90 }}
         delay_on: "00:03:00"
   - sensor:
-      # Wanted Level (2026-11-16, ~/homelab/discord-bot/wanted.py): the homelab's health as 0-5 stars. Attributes:
+      # Wanted Level (2026-11-16, ~/homelab/discord-bot/wanted.py): the homelab's health as 0-6 stars (one per problem). Attributes:
       # evading (the level flashing for ~2 min after it clears, else 0), crimes (worst first), clean streak and record.
       - name: Wanted level
         unique_id: wanted_level

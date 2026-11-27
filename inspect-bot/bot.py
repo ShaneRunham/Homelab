@@ -28,6 +28,7 @@ TOKEN = os.environ["INSPECT_BOT_TOKEN"]
 GUILD_ID = int(os.environ.get("GUILD_ID") or 0)
 REPORT_CHANNEL = os.environ.get("REPORT_CHANNEL", "bot-report")
 WEEKLY = dt.time(10, 0, tzinfo=ZoneInfo("Europe/London"))
+WEEKLY_ON = os.environ.get("WEEKLY_REPORT", "on") != "off"  # Shane turned it off 2026-11-27; /inspect still works
 COLOUR = {checks.RED: 0xE5484D, checks.AMBER: 0xF5A524, checks.GREEN: 0x30A46C, checks.INFO: 0x8B8D98}
 NO_PINGS = discord.AllowedMentions.none()
 ACTIVITY = Path(__file__).resolve().parent / "activity.json"
@@ -56,7 +57,7 @@ class InspectBot(discord.Client):
         return self.guilds[0] if len(self.guilds) == 1 else None
 
     async def on_ready(self):
-        if not weekly.is_running():
+        if WEEKLY_ON and not weekly.is_running():
             weekly.start()
         if not save_activity.is_running():
             save_activity.start()

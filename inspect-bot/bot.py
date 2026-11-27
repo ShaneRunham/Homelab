@@ -67,6 +67,19 @@ class InspectBot(discord.Client):
         if not weekly_backup.is_running():
             weekly_backup.start()
         await self.set_up()
+        await self.show_status()
+
+    async def show_status(self):
+        """Profile status: "Watching 41 riders 🏍️", updated as people join and leave."""
+        g = self.guild()
+        if g:
+            n = sum(1 for m in g.members if not m.bot)
+            await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching,
+                                                                 name=f"{n} riders 🏍️"))
+
+    async def on_member_remove(self, member):
+        if member.guild == self.guild():
+            await self.show_status()
 
     # --- activity -------------------------------------------------------------
     def saw(self, member):
@@ -91,6 +104,7 @@ class InspectBot(discord.Client):
     async def on_member_join(self, member):
         if member.guild == self.guild() and not member.bot:
             self.remember(member)
+            await self.show_status()
 
     def remember(self, member):
         """Keep the member's own server name, as long as it isn't a "(@roblox)" one."""

@@ -1,7 +1,6 @@
 """DPGS Rider Licence (2026-11-28): an ID card for each new member (welcome), stamped REVOKED when they leave.
 Drawn with Pillow and the system Noto fonts; the server icon is assets/server_icon.png.
 render(avatar, name, number, joined: date, status: "unverified"|"verified", member_id, revoked=False, fallback="") -> PNG"""
-import datetime as dt
 import io
 import math
 import os

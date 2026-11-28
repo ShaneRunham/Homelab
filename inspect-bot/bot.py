@@ -8,6 +8,7 @@ Two things it does besides reporting (2026-11-26):
   "TheirServerName (@RobloxUser)", using the names remembered in names.json (see nicknames.py).
 - Welcome: a Rider Licence card for each join, redrawn VERIFIED when they verify, REVOKED on leave (welcome.py).
 - Suggestions: a button-only suggestions channel with a staff queue and voting (suggestions.py, 2026-11-28).
+- Strikes: rideout rules and a staff strike record, member menu > Apps > Give strike (strikes.py, 2026-11-28).
 - Backup: every Sunday 04:00 it saves the whole layout to backups/auto-*.json (snapshot.py), keeping 12.
 It changes nothing else: no roles, channels or messages."""
 import datetime as dt
@@ -26,6 +27,7 @@ from dotenv import load_dotenv
 import checks
 import nicknames
 import snapshot
+import strikes
 import suggestions
 import welcome
 
@@ -61,6 +63,7 @@ class InspectBot(discord.Client):
         self.dirty = "since" not in data
         self.names = nicknames.load_names()
         self.suggestions = suggestions.Suggestions(self)
+        self.strikes = strikes.Strikes(self)
         self.welcome = welcome.Welcome(os.environ.get("WELCOME_CARDS", "off") == "on")
 
     def guild(self) -> discord.Guild | None:
@@ -84,7 +87,8 @@ class InspectBot(discord.Client):
             await self.suggestions.ensure_panel(g)
 
     async def on_interaction(self, interaction: discord.Interaction):
-        await self.suggestions.handle(interaction)  # the suggestion buttons (suggestions.py); commands go to the tree
+        if not await self.suggestions.handle(interaction):  # suggestion buttons (suggestions.py)
+            await self.strikes.handle(interaction)  # strike-log buttons (strikes.py); commands go to the tree
 
     async def show_status(self):
         """Profile status: "Watching 41 riders 🏍️", updated as people join and leave."""
@@ -237,6 +241,13 @@ async def inspect(interaction: discord.Interaction):
     except Exception as e:
         log.exception("inspect failed")
         await interaction.followup.send(f"Inspection failed: {e}", ephemeral=True)
+
+
+@bot.tree.context_menu(name="Give strike")
+@app_commands.guild_only()
+async def give_strike(interaction: discord.Interaction, member: discord.Member):
+    """Member menu > Apps > Give strike: a rideout strike (strikes.py). Higher Ups and above only."""
+    await bot.strikes.open_form(interaction, member)
 
 
 @tasks.loop(time=WEEKLY)

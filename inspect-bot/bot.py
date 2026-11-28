@@ -6,6 +6,7 @@ Two things it does besides reporting (2026-11-26):
   kept in activity.json, so the report can list members quiet for 2+ weeks.
 - Names: when Bloxlink renames someone to "RobloxName (@RobloxUser)", it renames them to
   "TheirServerName (@RobloxUser)", using the names remembered in names.json (see nicknames.py).
+- Suggestions: a button-only suggestions channel with a staff queue and voting (suggestions.py, 2026-11-28).
 - Backup: every Sunday 04:00 it saves the whole layout to backups/auto-*.json (snapshot.py), keeping 12.
 It changes nothing else: no roles, channels or messages."""
 import datetime as dt
@@ -24,6 +25,7 @@ from dotenv import load_dotenv
 import checks
 import nicknames
 import snapshot
+import suggestions
 
 load_dotenv()
 TOKEN = os.environ["INSPECT_BOT_TOKEN"]
@@ -56,6 +58,7 @@ class InspectBot(discord.Client):
         self.seen = {int(k): dt.datetime.fromisoformat(v) for k, v in data.get("seen", {}).items()}
         self.dirty = "since" not in data
         self.names = nicknames.load_names()
+        self.suggestions = suggestions.Suggestions(self)
 
     def guild(self) -> discord.Guild | None:
         if GUILD_ID:
@@ -69,8 +72,16 @@ class InspectBot(discord.Client):
             save_activity.start()
         if not weekly_backup.is_running():
             weekly_backup.start()
+        if not suggestion_tick.is_running():
+            suggestion_tick.start()
         await self.set_up()
         await self.show_status()
+        g = self.guild()
+        if g:
+            await self.suggestions.ensure_panel(g)
+
+    async def on_interaction(self, interaction: discord.Interaction):
+        await self.suggestions.handle(interaction)  # the suggestion buttons (suggestions.py); commands go to the tree
 
     async def show_status(self):
         """Profile status: "Watching 41 riders 🏍️", updated as people join and leave."""
@@ -242,6 +253,16 @@ async def weekly_backup():
             log.info("Layout backup saved: %s", snapshot.save(g).name)
         except Exception:
             log.exception("layout backup failed")
+
+
+@tasks.loop(hours=1)
+async def suggestion_tick():
+    g = bot.guild()
+    if g:
+        try:
+            await bot.suggestions.tick(g)
+        except Exception:
+            log.exception("suggestions tick failed")
 
 
 @tasks.loop(minutes=10)

@@ -79,3 +79,4 @@ home-assistant/config/www/vice-panel/football/
 inspect-bot/backups/
 inspect-bot/names.json
 inspect-bot/activity.json
+inspect-bot/suggestions.json

@@ -6,6 +6,7 @@ Two things it does besides reporting (2026-11-26):
   kept in activity.json, so the report can list members quiet for 2+ weeks.
 - Names: when Bloxlink renames someone to "RobloxName (@RobloxUser)", it renames them to
   "TheirServerName (@RobloxUser)", using the names remembered in names.json (see nicknames.py).
+- Welcome: a Rider Licence card for each join, redrawn VERIFIED when they verify, REVOKED on leave (welcome.py).
 - Suggestions: a button-only suggestions channel with a staff queue and voting (suggestions.py, 2026-11-28).
 - Backup: every Sunday 04:00 it saves the whole layout to backups/auto-*.json (snapshot.py), keeping 12.
 It changes nothing else: no roles, channels or messages."""
@@ -26,6 +27,7 @@ import checks
 import nicknames
 import snapshot
 import suggestions
+import welcome
 
 load_dotenv()
 TOKEN = os.environ["INSPECT_BOT_TOKEN"]
@@ -59,6 +61,7 @@ class InspectBot(discord.Client):
         self.dirty = "since" not in data
         self.names = nicknames.load_names()
         self.suggestions = suggestions.Suggestions(self)
+        self.welcome = welcome.Welcome(os.environ.get("WELCOME_CARDS", "off") == "on")
 
     def guild(self) -> discord.Guild | None:
         if GUILD_ID:
@@ -94,6 +97,8 @@ class InspectBot(discord.Client):
     async def on_member_remove(self, member):
         if member.guild == self.guild():
             await self.show_status()
+            if not member.bot:
+                await self.welcome.left(member)  # REVOKED licence in flying-out
 
     # --- activity -------------------------------------------------------------
     def saw(self, member):
@@ -119,6 +124,7 @@ class InspectBot(discord.Client):
         if member.guild == self.guild() and not member.bot:
             self.remember(member)
             await self.show_status()
+            await self.welcome.joined(member)  # Rider Licence welcome in flying-in
 
     def remember(self, member):
         """Keep the member's own server name, as long as it isn't a "(@roblox)" one."""
@@ -127,7 +133,11 @@ class InspectBot(discord.Client):
             nicknames.save_names(self.names)
 
     async def on_member_update(self, before, after):
-        if after.bot or after.guild != self.guild() or before.nick == after.nick:
+        if after.bot or after.guild != self.guild():
+            return
+        if welcome.verified(after) and not welcome.verified(before):
+            await self.welcome.verified_now(after)  # their welcome licence turns VERIFIED
+        if before.nick == after.nick:
             return
         if not nicknames.SUFFIX.search(after.display_name):
             self.remember(after)  # they changed their own name: use it from now on

@@ -134,6 +134,16 @@ class Checks(unittest.TestCase):
         self.assertNotIn("newbie", text)
         self.assertNotIn("Dyno", text)
 
+    def test_accepted_decisions(self):
+        everyone = role("@everyone", 0, default=True)
+        owner = role("Founder", 5, members=[member("a"), member("b")], administrator=True)
+        s = checks.roles_section(guild([everyone, owner]), accepted_admin=("Founder",))
+        self.assertEqual(levels(s), [checks.INFO])
+        kept = role("Miami", 2)
+        s = checks.cleanup_section(guild([everyone, kept, role("Old", 1)]), members_loaded=True, keep_roles=("Miami",))
+        self.assertIn("Old", s.findings[0][1])
+        self.assertNotIn("Miami", s.findings[0][1])
+
     def test_nickname_fits_discord_limit(self):
         import nicknames
         self.assertEqual(nicknames.nickname("Viper", "ybd_nebula"), "Viper (@ybd_nebula)")

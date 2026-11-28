@@ -34,6 +34,9 @@ BACKUP_AT = dt.time(4, 0, tzinfo=ZoneInfo("Europe/London"))  # Sundays: snapshot
 WEEKLY_ON = os.environ.get("WEEKLY_REPORT", "on") != "off"  # Shane turned it off 2026-11-27; /inspect still works
 COLOUR = {checks.RED: 0xE5484D, checks.AMBER: 0xF5A524, checks.GREEN: 0x30A46C, checks.INFO: 0x8B8D98}
 NO_PINGS = discord.AllowedMentions.none()
+# Decisions already made, so /inspect stops flagging them (comma-separated role names, in .env)
+ACCEPT_ADMIN = [n.strip() for n in os.environ.get("ACCEPT_ADMIN_ROLES", "").split(",") if n.strip()]
+KEEP_ROLES = [n.strip() for n in os.environ.get("KEEP_EMPTY_ROLES", "").split(",") if n.strip()]
 ACTIVITY = Path(__file__).resolve().parent / "activity.json"
 
 log = logging.getLogger("inspect-bot")
@@ -155,7 +158,8 @@ class InspectBot(discord.Client):
         automod = await fetch_or_none(g.fetch_automod_rules())
         webhooks = await fetch_or_none(g.webhooks())
         sections = checks.inspect(g, automod=automod, webhooks=webhooks, members_loaded=g.chunked,
-                                  activity=(self.seen, self.since))
+                                  activity=(self.seen, self.since), accepted_admin=ACCEPT_ADMIN,
+                                  keep_roles=KEEP_ROLES)
         for embed in build_embeds(g, sections, who):
             await channel.send(embed=embed)
         return channel

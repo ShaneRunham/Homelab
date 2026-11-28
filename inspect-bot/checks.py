@@ -58,7 +58,8 @@ def is_staff_role(role: discord.Role) -> bool:
     return not role.managed and not role.is_default() and any(getattr(role.permissions, p) for p in STAFF_PERMS)
 
 
-def roles_section(guild: discord.Guild) -> Section:
+def roles_section(guild: discord.Guild, accepted_admin=()) -> Section:
+    """accepted_admin: role names allowed Administrator on purpose (the owner's role): shown as info, not a warning."""
     s = Section("Roles and permissions")
     everyone = guild.default_role
     bad = perm_names(everyone.permissions)
@@ -73,7 +74,9 @@ def roles_section(guild: discord.Guild) -> Section:
         people = len(humans(role))
         bots = len(role.members) - people
         who = plural(people, "member") + (f", {plural(bots, 'bot')}" if bots else "")
-        if role.permissions.administrator:
+        if role.permissions.administrator and role.name in accepted_admin:
+            s.add(INFO, f"**{role.name}** has Administrator ({who}): accepted, the owner's role.")
+        elif role.permissions.administrator:
             level = RED if people > 3 else AMBER
             s.add(level, f"**{role.name}** has Administrator ({who}). Keep this to the owner and one "
                          f"trusted admin role; give staff specific permissions instead.")
@@ -152,11 +155,12 @@ def channels_section(guild: discord.Guild, now: dt.datetime) -> Section:
     return s
 
 
-def cleanup_section(guild: discord.Guild, members_loaded: bool) -> Section:
+def cleanup_section(guild: discord.Guild, members_loaded: bool, keep_roles=()) -> Section:
+    """keep_roles: role names kept on purpose even when nobody has them (not reported as empty)."""
     s = Section("Role cleanup")
     roles = [r for r in guild.roles if not r.is_default() and not r.managed]
     if members_loaded:
-        empty = [r for r in roles if not r.members]
+        empty = [r for r in roles if not r.members and r.name not in keep_roles]
         if empty:
             s.add(AMBER, f"{plural(len(empty), 'role')} nobody has: {names(empty, '')}. Delete the ones you don't need.")
     else:
@@ -247,15 +251,16 @@ def names(items, prefix="#", limit=15) -> str:
 
 
 def inspect(guild: discord.Guild, *, automod=None, webhooks=None, members_loaded=True, now=None,
-            activity=None) -> list[Section]:
-    """activity: (seen, since) from the bot's tracker, or None to leave the Activity section out."""
+            activity=None, accepted_admin=(), keep_roles=()) -> list[Section]:
+    """activity: (seen, since) from the bot's tracker, or None to leave the Activity section out.
+    accepted_admin / keep_roles: decisions already made (bot.py reads them from .env), so they stop being flagged."""
     now = now or discord.utils.utcnow()
     sections = [
         safety_section(guild, automod, webhooks),
-        roles_section(guild),
+        roles_section(guild, accepted_admin),
         bots_section(guild),
         channels_section(guild, now),
-        cleanup_section(guild, members_loaded),
+        cleanup_section(guild, members_loaded, keep_roles),
     ]
     if activity:
         sections.append(activity_section(guild, *activity, now))

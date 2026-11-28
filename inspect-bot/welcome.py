@@ -2,7 +2,7 @@
 
 Join: in #🛬・flying-in, "Welcome @member 👋", a card with the "Get rolling" links, the licence (status UNVERIFIED,
 or VERIFIED if they already have the role) and a "Verify here" button. When they get the Verified role later, the
-licence on that post is redrawn as VERIFIED. Leave: in #🛫・flying-out, the licence greyed out and stamped REVOKED.
+licence on that post is redrawn as VERIFIED and the button is removed. Leave: in #🛫・flying-out, the licence greyed out and stamped REVOKED.
 Off unless WELCOME_CARDS=on in .env (so it never doubles up with Welcomer). Post ids in welcome.json (gitignored).
 """
 from __future__ import annotations
@@ -88,6 +88,8 @@ class Welcome:
             return
         number = riders(member.guild)
         e, v = welcome_embed(member.guild)
+        if verified(member):  # already verified when they join (rare): no button needed
+            v = discord.utils.MISSING
         try:
             msg = await ch.send(f"Welcome {member.mention} 👋", embed=e, view=v,
                                 file=await self.card(member, number, "verified" if verified(member) else "unverified"),
@@ -104,8 +106,9 @@ class Welcome:
             return
         try:
             msg = await member.guild.get_channel(rec["channel"]).fetch_message(rec["msg"])
-            e, v = welcome_embed(member.guild)
-            await msg.edit(embed=e, view=v, attachments=[await self.card(member, rec["number"], "verified")])
+            e, _ = welcome_embed(member.guild)
+            await msg.edit(embed=e, view=None,  # verified: the "Verify here" button goes
+                           attachments=[await self.card(member, rec["number"], "verified")])
         except (discord.HTTPException, AttributeError) as ex:
             return log.warning("welcome: couldn't update %s's licence: %s", member, ex)
         rec["verified"] = True

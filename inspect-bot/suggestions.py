@@ -27,7 +27,8 @@ STAFF_FLOOR = "Higher Ups"  # this role and every role above it count as staff
 MIN_DAYS, PER_DAY_SECS, VOTE_DAYS, POPULAR = 7, 86400, 7, 5
 MIN_WHY = 30
 # Member ids that skip the limits without being staff, for testing (.env SUGGEST_SKIP_LIMITS, comma-separated)
-SKIP = {int(x) for x in os.environ.get("SUGGEST_SKIP_LIMITS", "").split(",") if x.strip().isdigit()}
+def skip_ids() -> set[int]:  # read when used: bot.py loads .env after importing this module
+    return {int(x) for x in os.environ.get("SUGGEST_SKIP_LIMITS", "").split(",") if x.strip().isdigit()}
 CATEGORIES = {
     "discord": "💬 Discord server", "rideouts": "🏍️ Rideouts & events", "ranks": "🏆 Ranks & tryouts",
     "bls": "🎮 BLS", "other": "✨ Other",
@@ -55,7 +56,7 @@ def save(st: dict):
 
 def can_submit(st: dict, member, now: float, staff: bool) -> str | None:
     """None if this member may send a suggestion now, else the reason they can't (shown only to them)."""
-    if staff or member.id in SKIP:
+    if staff or member.id in skip_ids():
         return None
     if not any(r.name == "Verified" for r in member.roles):
         return "Verify first in ✅・verification, then you can make suggestions."

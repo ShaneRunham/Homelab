@@ -34,6 +34,13 @@ jobs:
     steps:
       - run: eval "$FETCH"
       - run: pip install -q --root-user-action=ignore -r inspect-bot/requirements.txt pyflakes
+      - name: Stand-in for the PC's Noto fonts (licence.py draws the Rider Licence with them)
+        run: |
+          apk add -q font-dejavu
+          mkdir -p /usr/share/fonts/google-noto
+          for f in NotoSans-ExtraCondensedBlack NotoSans-Bold NotoSans-Medium NotoSansMono-Bold; do
+            cp /usr/share/fonts/dejavu/DejaVuSans.ttf /usr/share/fonts/google-noto/$f.ttf
+          done
       - run: cd inspect-bot && python -m unittest discover -s tests && python -m pyflakes *.py tests/*.py
 
   compose:
